@@ -1,12 +1,12 @@
 /**
  * @file input_device_register.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-08-21
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "input_device_register.h"
 
@@ -25,7 +25,7 @@ bool InputDevice_Register::install(INPUT_DEVICE_BASE* inputDevice, void* userDat
 {
     if (inputDevice == nullptr)
         return false;
-    
+
     if (isDeviceInstalled(inputDevice))
         return false;
 
@@ -46,8 +46,8 @@ bool InputDevice_Register::uninstall(INPUT_DEVICE_BASE* inputDevice, bool freeMe
 {
     if (inputDevice == nullptr)
         return false;
-    
-    /* Iterate the shit out */
+
+    /* Iterate the stuff out */
     for (auto iter = _input_device_list.begin(); iter != _input_device_list.end(); iter++)
     {
         if (*iter == inputDevice)
@@ -55,7 +55,7 @@ bool InputDevice_Register::uninstall(INPUT_DEVICE_BASE* inputDevice, bool freeMe
             /* Free input device's memory */
             if (freeMemory)
                 delete (*iter);
-            
+
             /* Remove it from the list */
             _input_device_list.erase(iter);
             return true;
@@ -73,7 +73,7 @@ void InputDevice_Register::uninstallAllDevice(bool freeMemory)
         for (auto i : _input_device_list)
             delete i;
     }
-    
+
     /* Clear the list */
     _input_device_list.clear();
 }
@@ -84,7 +84,7 @@ bool InputDevice_Register::isDeviceInstalled(INPUT_DEVICE_BASE* inputDevice)
     if (inputDevice == nullptr)
         return false;
 
-    /* Iterate the shit out */
+    /* Iterate the stuff out */
     for (const auto& i : _input_device_list)
     {
         if (i == inputDevice)

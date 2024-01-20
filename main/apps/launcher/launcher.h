@@ -48,7 +48,7 @@ namespace MOONCAKE
                 }
             };
 
-            struct SystemState_t 
+            struct SystemState_t
             {
                 // 1 ~ 5
                 uint8_t wifi_state = 5;
@@ -61,14 +61,14 @@ namespace MOONCAKE
             {
                 HAL::Hal* hal = nullptr;
 
-                // View shit
+                // View stuff
                 // Menu
                 uint32_t menu_update_preiod = 10;
                 uint32_t menu_update_count = 0;
                 SMOOTH_MENU::Simple_Menu* menu = nullptr;
                 SMOOTH_MENU::SimpleMenuCallback_t* menu_render_cb = nullptr;
                 APP_BASE* _opened_app = nullptr;
-                
+
                 // System bar
                 uint32_t system_bar_update_preiod = 1000;
                 uint32_t system_bar_update_count = 0;
@@ -92,15 +92,15 @@ namespace MOONCAKE
             void _update_system_bar();
             void _start_keyboard_bar();
             void _update_keyboard_bar();
-            
-            // Platform port 
+
+            // Platform port
             void _port_wait_enter();
             bool _port_check_next_pressed();
             bool _port_check_last_pressed();
             bool _port_check_enter_pressed();
             void _port_update_keyboard_state();
             void _port_update_system_state();
-        
+
 
         public:
             void onCreate() override;

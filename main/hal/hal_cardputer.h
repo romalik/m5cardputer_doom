@@ -1,12 +1,12 @@
 /**
  * @file hal_cardputer.h
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-09-22
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "hal.h"
 
@@ -25,9 +25,12 @@ namespace HAL
         public:
             std::string type() override { return "cardputer"; }
             void init() override;
-            void playKeyboardSound() override { _speaker->setVolume(72); _speaker->tone(5000, 20); }
-            void playLastSound() override { _speaker->setVolume(32); _speaker->tone(6000, 20); }
-            void playNextSound() override { _speaker->setVolume(64); _speaker->tone(7000, 20); }
+            void playKeyboardSound() override { _speaker->setChannelVolume(TONE_CHANNEL, 100); _speaker->tone(1250, 20, TONE_CHANNEL); }
+            void playLastSound() override { _speaker->setChannelVolume(TONE_CHANNEL, 75); _speaker->tone(1500, 10, TONE_CHANNEL); }
+            void playNextSound() override { _speaker->setChannelVolume(TONE_CHANNEL, 100); _speaker->tone(1000, 20, TONE_CHANNEL); }
+            // void playKeyboardSound() override { _speaker->setChannelVolume(CHANNEL_TONE, 24*3); _speaker->tone(2500, 20, CHANNEL_TONE); }
+            // void playLastSound() override { _speaker->setChannelVolume(CHANNEL_TONE, 18*3); _speaker->tone(3000, 20, CHANNEL_TONE); }
+            // void playNextSound() override { _speaker->setChannelVolume(CHANNEL_TONE, 24*3); _speaker->tone(2000, 20, CHANNEL_TONE); }
             uint8_t getBatLevel() override;
 
         public:
@@ -36,3 +39,5 @@ namespace HAL
             static void LcdBgLightTest(HalCardputer* hal);
     };
 }
+
+extern float __cardputer_hal_bat_v;

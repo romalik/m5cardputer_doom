@@ -17,13 +17,15 @@
 #include <iostream>
 #include <string>
 
+#define TONE_CHANNEL 6
+
 namespace HAL
 {
     /**
     * @brief Hal base for DI
     *
     */
-    class Hal 
+    class Hal
     {
         protected:
             LGFX_Device* _display;
@@ -39,9 +41,9 @@ namespace HAL
             bool _sntp_adjusted;
 
         public:
-            Hal() : 
-            _display(nullptr), 
-            _canvas(nullptr), 
+            Hal() :
+            _display(nullptr),
+            _canvas(nullptr),
             _canvas_system_bar(nullptr),
             _canvas_keyboard_bar(nullptr),
             _keyboard(nullptr),
@@ -51,7 +53,7 @@ namespace HAL
             _sntp_adjusted(false)
             {}
 
-            // Getter 
+            // Getter
             inline LGFX_Device* display() { return _display; }
             inline LGFX_Sprite* canvas() { return _canvas; }
             inline LGFX_Sprite* canvas_system_bar() { return _canvas_system_bar; }
@@ -65,13 +67,30 @@ namespace HAL
             inline bool isSntpAdjusted(void) { return _sntp_adjusted; }
 
 
-            
-            // Canvas 
-            inline void canvas_system_bar_update() { _canvas_system_bar->pushSprite(_canvas_keyboard_bar->width(), 0); }
-            inline void canvas_keyboard_bar_update() { _canvas_keyboard_bar->pushSprite(0, 0); }
-            inline void canvas_update() { _canvas->pushSprite(_canvas_keyboard_bar->width(), _canvas_system_bar->height()); }
 
-            // Override 
+            // #define BORDER_WIDTH 2
+            // #define BORDER_COLOR TFT_WHITE
+            // Canvas
+            inline void canvas_system_bar_update() {
+                // _canvas_system_bar->fillRect(0, 0, _canvas_system_bar->width(), BORDER_WIDTH, BORDER_COLOR);    // top border
+                // _canvas_system_bar->fillRect(_canvas_system_bar->width() - BORDER_WIDTH, BORDER_WIDTH, BORDER_WIDTH, _canvas_system_bar->height() - BORDER_WIDTH, BORDER_COLOR);    // right border
+                _canvas_system_bar->pushSprite(_canvas_keyboard_bar->width(), 0);
+            }
+            inline void canvas_keyboard_bar_update() {
+                // _canvas_keyboard_bar->fillRect(0, 0, BORDER_WIDTH, _canvas_keyboard_bar->height(), BORDER_COLOR);   // left border
+                // _canvas_keyboard_bar->fillRect(BORDER_WIDTH, 0, _canvas_keyboard_bar->width(), BORDER_WIDTH, BORDER_COLOR);  // top border
+                // _canvas_keyboard_bar->fillRect(0, _canvas_keyboard_bar->height() - BORDER_WIDTH, _canvas_keyboard_bar->width(), BORDER_WIDTH, BORDER_COLOR); // bottom border
+
+                _canvas_keyboard_bar->pushSprite(0, 0);
+            }
+            inline void canvas_update() {
+                // _canvas->fillRect(_canvas->width() - BORDER_WIDTH, 0, BORDER_WIDTH, _canvas->height(), BORDER_COLOR);   // right border
+                // _canvas->fillRect(0, _canvas->height() - BORDER_WIDTH, _canvas->width() - BORDER_WIDTH, BORDER_WIDTH, BORDER_COLOR);  // bottom border
+
+                _canvas->pushSprite(_canvas_keyboard_bar->width(), _canvas_system_bar->height());
+            }
+
+            // Override
             virtual std::string type() { return "null"; }
             virtual void init() {}
 

@@ -1,12 +1,12 @@
 /**
  * @file app_ir.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.6
  * @date 2023-09-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "app_ir.h"
 #include "lgfx/v1/misc/enum.hpp"
@@ -29,19 +29,19 @@ void AppIR::_update_input()
 {
     // spdlog::info("{} {}", _keyboard->keyList().size(), _data.last_key_num);
 
-    // If changed 
+    // If changed
     if (_keyboard->keyList().size() != _data.last_key_num)
     {
-        // If key pressed 
+        // If key pressed
         if (_keyboard->keyList().size() != 0)
         {
-            // Update states and values 
+            // Update states and values
             _keyboard->updateKeysState();
 
-            // If enter 
+            // If enter
             if (_keyboard->keysState().enter)
             {
-                // New line 
+                // New line
                 _canvas->print(" \n");
 
                 // // Reset buffer
@@ -50,25 +50,25 @@ void AppIR::_update_input()
                 _data.current_state = state_fire;
             }
 
-            // If delete 
+            // If delete
             else if (_keyboard->keysState().del)
             {
                 if (_data.repl_input_buffer.size())
                 {
-                    // Pop input buffer 
+                    // Pop input buffer
                     _data.repl_input_buffer.pop_back();
 
-                    // Pop canvas display 
+                    // Pop canvas display
                     int cursor_x = _canvas->getCursorX();
                     int cursor_y = _canvas->getCursorY();
 
                     if (cursor_x - FONT_REPL_WIDTH < 0)
                     {
-                        // Last line 
+                        // Last line
                         cursor_y -= FONT_REPL_HEIGHT;
                         cursor_x = _canvas->width() - FONT_REPL_WIDTH;
                     }
-                    else 
+                    else
                     {
                         cursor_x -= FONT_REPL_WIDTH;
                     }
@@ -81,8 +81,8 @@ void AppIR::_update_input()
                 }
             }
 
-            // Normal chars 
-            else 
+            // Normal chars
+            else
             {
                 for (auto& i : _keyboard->keysState().values)
                 {
@@ -95,12 +95,12 @@ void AppIR::_update_input()
 
             _canvas_update();
 
-            // Update last key num 
+            // Update last key num
             _data.last_key_num = _keyboard->keyList().size();
         }
-        else 
+        else
         {
-            // Reset last key num 
+            // Reset last key num
             _data.last_key_num = 0;
         }
     }
@@ -111,7 +111,7 @@ void AppIR::_update_cursor()
 {
     if ((millis() - _data.cursor_update_time_count) > _data.cursor_update_period)
     {
-        // Get cursor 
+        // Get cursor
         int cursor_x = _canvas->getCursorX();
         int cursor_y = _canvas->getCursorY();
 
@@ -136,7 +136,7 @@ void AppIR::_update_state()
         _canvas->setTextColor(THEME_COLOR_REPL_TEXT, THEME_COLOR_BG);
         _canvas->printf(">>> ");
         _canvas_update();
-        
+
         _data.current_state = state_wait_input;
     }
 
@@ -145,7 +145,7 @@ void AppIR::_update_state()
         // ir_wrap_send(16, 1);
         spdlog::info("raw input: {}", _data.repl_input_buffer);
 
-        //  Try parse input shit 
+        //  Try parse input stuff
         bool is_parse_ok = false;
         int ir_addr = 0;
         int ir_data = 0;
@@ -155,7 +155,7 @@ void AppIR::_update_state()
         spdlog::info("parse get {}:", _data.parse_result.size());
         for (const auto& i : _data.parse_result)
             spdlog::info("{}", i);
-        
+
         if (_data.parse_result.size() >= 2)
         {
             // https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.6/esp32/api-guides/error-handling.html
@@ -178,7 +178,7 @@ void AppIR::_update_state()
 
 
 
-        // Send the shit out 
+        // Send the stuff out
         if (is_parse_ok)
         {
             ir_wrap_send((uint8_t)ir_addr, (uint8_t)ir_data);
@@ -187,7 +187,7 @@ void AppIR::_update_state()
             _canvas->printf("Msg Send:\naddr: 0x%02X data: 0x%02X\n", (uint8_t)ir_addr, (uint8_t)ir_data);
             _canvas->setTextColor(THEME_COLOR_REPL_TEXT, THEME_COLOR_BG);
         }
-        else 
+        else
         {
             _canvas->setTextColor(TFT_RED, THEME_COLOR_BG);
             _canvas->printf("Parse %s failed\n", _data.repl_input_buffer.c_str());
@@ -196,14 +196,14 @@ void AppIR::_update_state()
 
 
 
-        // // New line 
+        // // New line
         // _canvas->print(">>> ");
         // _canvas_update();
         // // Reset buffer
         // _data.repl_input_buffer = "";
 
 
-        // Keep that shit still 
+        // Keep that stuff still
         _canvas->printf(">>> %s", _data.repl_input_buffer.c_str());
         _canvas_update();
 
@@ -212,7 +212,7 @@ void AppIR::_update_state()
 }
 
 
-// Cpp sucks 
+// Cpp sucks
 // https://favtutor.com/blogs/split-string-cpp
 void AppIR::_customSplit(const std::string& str, char separator, std::vector<std::string>& result)
 {
@@ -220,10 +220,10 @@ void AppIR::_customSplit(const std::string& str, char separator, std::vector<std
 
     int startIndex = 0, endIndex = 0;
     std::string temp;
-    for (int i = 0; i <= str.size(); i++) 
+    for (int i = 0; i <= str.size(); i++)
     {
         // If we reached the end of the word or the end of the input.
-        if (str[i] == separator || i == str.size()) 
+        if (str[i] == separator || i == str.size())
         {
             endIndex = i;
             temp.clear();
@@ -247,8 +247,8 @@ void AppIR::onCreate()
 
 
 void AppIR::onResume()
-{ 
-    ANIM_APP_OPEN(); 
+{
+    ANIM_APP_OPEN();
 
     _canvas_clear();
     _canvas->setTextScroll(true);
@@ -257,7 +257,7 @@ void AppIR::onResume()
     _canvas->setFont(FONT_REPL);
     _canvas->setTextSize(FONT_SIZE_REPL);
     _canvas->setCursor(0, 0);
-    
+
     _data.current_state = state_init;
 }
 

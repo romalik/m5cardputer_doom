@@ -59,10 +59,10 @@ namespace m5
     bool use_adc = false;
 
     /// for I2S dma_buf_len
-    size_t dma_buf_len = 64;
+    size_t dma_buf_len = 128;
 
     /// for I2S dma_buf_count
-    size_t dma_buf_count = 4;
+    size_t dma_buf_count = 8;
 
     /// background task priority
     UBaseType_t task_priority = 2;

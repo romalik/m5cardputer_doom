@@ -4,9 +4,9 @@
  * @brief https://github.com/espressif/esp-idf/blob/v5.1/examples/wifi/scan/main/scan.c
  * @version 0.1
  * @date 2023-08-04
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "wifi_common_test.h"
 #include <string.h>
@@ -22,7 +22,7 @@ namespace WIFI_COMMON_TEST
 {
     /**
      * @brief Init nvs, only once
-     * 
+     *
      */
     void nvs_init()
     {
@@ -43,13 +43,11 @@ namespace WIFI_COMMON_TEST
 
 
     /**
-     * @brief Wifi scan 
-     * 
+     * @brief Wifi scan
+     *
      */
     namespace SCAN
     {
-        #define DEFAULT_SCAN_LIST_SIZE 10
-
         static const char *TAG = "scan";
 
         static void print_auth_mode(int authmode)
@@ -180,9 +178,9 @@ namespace WIFI_COMMON_TEST
 
 
 
-            
 
-            
+
+
             ESP_ERROR_CHECK(esp_netif_init());
             ESP_ERROR_CHECK(esp_event_loop_create_default());
             esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
@@ -244,7 +242,7 @@ namespace WIFI_COMMON_TEST
             // vTaskDelay(pdMS_TO_TICKS(3000));
             esp_wifi_deinit();
 
-            
+
 
 
             // esp_netif_create_default_wifi_sta
@@ -285,7 +283,7 @@ namespace WIFI_COMMON_TEST
             // ESP_ERROR_CHECK( ret );
 
 
-            
+
             ESP_ERROR_CHECK(esp_netif_init());
 
             // ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -329,7 +327,8 @@ namespace WIFI_COMMON_TEST
                 ScanResult_t new_result;
                 new_result.ssid = (char*)ap_info[i].ssid;
                 new_result.rssi = ap_info[i].rssi;
-                
+                new_result.channel = ap_info[i].primary;
+
                 /* Push data into list */
                 scanResult.push_back(new_result);
             }
@@ -343,7 +342,7 @@ namespace WIFI_COMMON_TEST
             esp_wifi_clear_default_wifi_driver_and_handlers(sta_netif);
 
 
-            
+
 
 
             esp_wifi_stop();
@@ -363,6 +362,114 @@ namespace WIFI_COMMON_TEST
 
 
 
+
+            // ESP_ERROR_CHECK(nvs_flash_deinit());
+        }
+
+
+
+        esp_netif_t *multi_scan_init()
+        {
+            // Initialize NVS
+            nvs_init();
+
+            ESP_ERROR_CHECK(esp_netif_init());
+
+            // ESP_ERROR_CHECK(esp_event_loop_create_default());
+            esp_event_loop_create_default();
+
+            esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+            assert(sta_netif);
+
+            wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+            ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+            ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+            ESP_ERROR_CHECK(esp_wifi_start());
+
+            return sta_netif;
+        }
+
+        static wifi_scan_config_t config;
+        void multi_scan_trigger(bool short_interval)
+        {
+            config.show_hidden = true;
+            config.scan_time.active.max = short_interval ? 120 : 360;
+            esp_wifi_scan_start(&config, false);
+        }
+
+        uint16_t multi_scan_get_result(std::vector<ScanResult_t>& scanResult, int max_count)   // return ap_count
+        {
+            uint16_t number = max_count;
+            auto *ap_info = new wifi_ap_record_t[max_count];
+            // wifi_ap_record_t ap_info[max_count];
+            uint16_t ap_count = 0;
+            memset(ap_info, 0, sizeof(wifi_ap_record_t) * max_count);
+
+            ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+            ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+            ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
+
+
+            /* Clear result list */
+            std::vector<ScanResult_t>().swap(scanResult);
+
+
+            for (int i = 0; (i < max_count) && (i < ap_count); i++)
+            {
+                // ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
+                // ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
+                // print_auth_mode(ap_info[i].authmode);
+                // if (ap_info[i].authmode != WIFI_AUTH_WEP)
+                // {
+                //     print_cipher_type(ap_info[i].pairwise_cipher, ap_info[i].group_cipher);
+                // }
+                // ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
+
+
+                ScanResult_t new_result;
+                if (ap_info[i].ssid[0]) {
+                    new_result.ssid = (char*)ap_info[i].ssid;
+                } else {
+                    // hidden
+                    char bssid[3*6+1];
+                    auto &b = ap_info[i].bssid;
+                    sprintf(bssid, "-%X:%X:%X:%X:%X:%X", b[0], b[1], b[2], b[3], b[4], b[5]);
+                    new_result.ssid = bssid;
+                }
+                new_result.rssi = ap_info[i].rssi;
+                new_result.channel = ap_info[i].primary;
+
+                /* Push data into list */
+                scanResult.push_back(new_result);
+            }
+
+            delete[] ap_info;
+            return ap_count;
+
+        }
+
+        void multi_scan_destroy(esp_netif_t *sta_netif)
+        {
+            // esp_wifi_scan_stop();
+            // esp_wifi_disconnect();
+
+            esp_wifi_clear_ap_list();
+
+            if (!sta_netif)
+                return;     // wifi not started by us, not stopping it
+
+            esp_wifi_clear_default_wifi_driver_and_handlers(sta_netif);
+
+            esp_wifi_stop();
+            // vTaskDelay(pdMS_TO_TICKS(3000));
+
+            esp_wifi_deinit();
+
+            // esp_netif_create_default_wifi_sta
+            esp_netif_destroy_default_wifi(sta_netif);
+            esp_netif_deinit();
+            esp_event_loop_delete_default();
 
             // ESP_ERROR_CHECK(nvs_flash_deinit());
         }

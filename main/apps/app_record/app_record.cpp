@@ -1,12 +1,12 @@
 /**
  * @file app_record.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-09-19
  * http://gitlab.m5stack.com/Forairaaaaa/stamps3_keypad_factory_test/blob/master/code/src/factory_test/mic/mic_test.cpp
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "app_record.h"
 #include "lgfx/v1/misc/enum.hpp"
@@ -26,16 +26,16 @@ void AppRecord::onCreate()
     _data.hal = mcAppGetDatabase()->Get("HAL")->value<HAL::Hal *>();
 }
 
-
-static constexpr const size_t record_number = 256;
-static constexpr const size_t record_length = 200;
-static constexpr const size_t record_size = record_number * record_length;
-static constexpr const size_t record_samplerate = 16000;
-static int16_t prev_y[record_length];
-static int16_t prev_h[record_length];
-static size_t rec_record_idx = 2;
-static size_t draw_record_idx = 0;
-static int16_t *rec_data;
+// static int16_t prev_y[record_length];
+// static int16_t prev_h[record_length];
+// static size_t rec_record_idx = 2;
+// static size_t draw_record_idx = 0;
+// static int16_t *rec_data = nullptr;
+#define prev_y _data.prev_y
+#define prev_h _data.prev_h
+#define rec_record_idx _data.rec_record_idx
+#define draw_record_idx _data.draw_record_idx
+#define rec_data _data.rec_data
 
 #define _canvas _data.hal->canvas()
 #define _canvas_update _data.hal->canvas_update
@@ -54,11 +54,28 @@ void AppRecord::onResume()
     // _canvas->print(" REC");
     // rec_data = (typeof(rec_data))heap_caps_malloc(record_size * sizeof(int16_t), MALLOC_CAP_8BIT);
 
+    _data.old_volume = _speaker->getVolume();
     rec_data = (typeof(rec_data))malloc(record_size * sizeof(int16_t));
+    if (rec_data == nullptr) {
+        _canvas->setCursor(0, 0);
+        _canvas->setFont(FONT_REPL);
+        _canvas->setTextColor(TFT_RED, THEME_COLOR_BG);
+        _canvas->setTextSize(1);
+        _canvas->println("Insufficient memory");
+        _canvas->println("");
+        _canvas->setTextColor(TFT_ORANGE);
+        _canvas->println("Exit other programs\n or reset device");
+        _canvas_update();
+
+        delay(3000);
+        _data.hal->playNextSound();
+        destroyApp();
+        return;
+    }
 
     memset(rec_data, 0 , record_size * sizeof(int16_t));
     _canvas_update();
-    
+
     /// Since the microphone and speaker cannot be used at the same time, turn off the speaker here.
     _speaker->end();
     _speaker->setVolume(255);
@@ -84,7 +101,7 @@ void AppRecord::onRunning()
 
 
 
-    
+
     if (_mic->isEnabled())
     {
         static constexpr int shift = 6;
@@ -103,7 +120,7 @@ void AppRecord::onRunning()
                 w = record_length - 1;
             }
 
-            // Align center 
+            // Align center
             static int y_offset = 0;
             static int last_y_offset = 0;
             static int average = 0;
@@ -124,7 +141,7 @@ void AppRecord::onRunning()
 
                 // _canvas->writeFastVLine(x + 10, prev_y[x] / 3 + y_offset, prev_h[x], THEME_COLOR_BG);
 
-                // Wipe last one 
+                // Wipe last one
                 _canvas->writeFastVLine(x + 10, prev_y[x] / 3 + last_y_offset, prev_h[x], THEME_COLOR_BG);
 
 
@@ -195,7 +212,7 @@ void AppRecord::onRunning()
             auto cfg = _mic->config();
             cfg.noise_filter_level = (cfg.noise_filter_level + 8) & 255;
             _mic->config(cfg);
-            _canvas->setCursor(0, 110);
+            _canvas->setCursor(10, 110);
             _canvas->setTextColor(TFT_ORANGE, THEME_COLOR_BG);
             _canvas->printf(" nf:%03d", cfg.noise_filter_level);
             _canvas_update();
@@ -220,6 +237,7 @@ void AppRecord::onRunning()
                 /// Since the microphone and speaker cannot be used at the same time, turn off the microphone here.
                 _mic->end();
                 _speaker->begin();
+                _speaker->setVolume(255);
 
                 // _canvas->setCursor(0, 40);
                 // _canvas->print(" PLAY");
@@ -248,13 +266,13 @@ void AppRecord::onRunning()
                 {
                     // _speaker->playRaw(&rec_data[start_pos], record_size - start_pos, record_samplerate, false, 1, 0);
                     // _speaker->playRaw(&rec_data[start_pos], record_size - start_pos, record_samplerate, true, 1, 0);
-                    _speaker->playRaw(&rec_data[start_pos], record_size - start_pos, 22050, false);
+                    _speaker->playRaw(&rec_data[start_pos], record_size - start_pos, record_samplerate, false);
                 }
                 if (start_pos > 0)
                 {
                     // _speaker->playRaw(rec_data, start_pos, record_samplerate, false, 1, 0);
                     // _speaker->playRaw(rec_data, start_pos, record_samplerate, true, 1, 0);
-                    _speaker->playRaw(rec_data, start_pos, 22050, false);
+                    _speaker->playRaw(rec_data, start_pos, record_samplerate, false);
                 }
                 do
                 {
@@ -295,16 +313,17 @@ void AppRecord::onRunning()
 
 
     // }
-    
 
 
-    else if (_data.hal->homeButton()->pressed()) 
+
+    else if (_data.hal->homeButton()->pressed())
     {
         while (_mic->isRecording()) { delay(1); }
 
         /// Since the microphone and speaker cannot be used at the same time, turn off the microphone here.
         _mic->end();
         _speaker->begin();
+        _speaker->setVolume(_data.old_volume);
 
         free(rec_data);
         // break;

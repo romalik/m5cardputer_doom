@@ -1,5 +1,5 @@
 #!/bin/bash
-### This is for lazzy shit like me to build -> flash - > monitor project
+### This is for lazzy stuff like me to build -> flash - > monitor project
 ### Use < usbipd wsl attach -a -b [BUSID] > on PowerShell to auto attach the board
 
 
@@ -8,7 +8,7 @@ IDF_PATH=$HOME/esp/esp-idf-v4.4.6
 SERIAL_PORT=/dev/ttyACM0
 
 
-# Help shit
+# Help stuff
 help() {
     sed -rn 's/^### ?//;T;p' "$0"
 }

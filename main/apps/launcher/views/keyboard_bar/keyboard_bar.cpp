@@ -1,12 +1,12 @@
 /**
  * @file keyboard_bar.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-09-19
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "../../launcher.h"
 #include "lgfx/v1/lgfx_fonts.hpp"
@@ -38,25 +38,35 @@ void Launcher::_update_keyboard_bar()
 {
     if ((millis() - _data.keyboard_bar_update_count) > _data.keyboard_bar_update_preiod)
     {
-        // Updata state 
+        // Updata state
         _port_update_keyboard_state();
 
-        // Backgound 
+        // Backgound
+        // int margin_x = 4;
+        // int margin_y = 6;
         int margin_x = 4;
-        int margin_y = 6;
+        int margin_y = 4;
 
         _data.hal->canvas_keyboard_bar()->fillScreen(THEME_COLOR_BG);
-        _data.hal->canvas_keyboard_bar()->fillSmoothRoundRect(
+        // _data.hal->canvas_keyboard_bar()->fillSmoothRoundRect(
+        //     margin_x,
+        //     margin_y,
+        //     _data.hal->canvas_keyboard_bar()->width() - margin_x * 2,
+        //     _data.hal->canvas_keyboard_bar()->height() - margin_y * 2,
+        //     (_data.hal->canvas_keyboard_bar()->height() - margin_y * 2) / 2,
+        //     THEME_COLOR_KB_BAR
+        // );
+        _data.hal->canvas_keyboard_bar()->fillRect(
             margin_x,
-            margin_y, 
-            _data.hal->canvas_keyboard_bar()->width() - margin_x * 2, 
-            _data.hal->canvas_keyboard_bar()->height() - margin_y * 2, 
-            (_data.hal->canvas_keyboard_bar()->height() - margin_y * 2) / 2,
+            margin_y,
+            _data.hal->canvas_keyboard_bar()->width() - margin_x * 2,
+            _data.hal->canvas_keyboard_bar()->height() - margin_y * 2,
             THEME_COLOR_KB_BAR
         );
 
-        // render state 
-        int x = 7;
+        // render state
+        // int x = 7;
+        int x = 6;
         int y = 20;
         int width = 22;
         int height = 17;
@@ -64,37 +74,37 @@ void Launcher::_update_keyboard_bar()
 
         if (_data.keybaord_state.caps_lock)
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_Aa);
-        else  
+        else
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_Aa0);
 
         y = y + height + gap_y;
         if (_data.keybaord_state.fn)
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_fn);
-        else  
+        else
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_fn0);
 
         y = y + height + gap_y;
         if (_data.keybaord_state.ctrl)
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_crtl);
-        else  
+        else
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_ctrl0);
 
         y = y + height + gap_y;
         if (_data.keybaord_state.opt)
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_opt);
-        else  
+        else
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_opt1);
 
         y = y + height + gap_y;
         if (_data.keybaord_state.alt)
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_alt);
-        else  
+        else
             _data.hal->canvas_keyboard_bar()->pushImage(x, y, width, height, image_data_alt0);
 
 
-        // Push 
+        // Push
         _data.hal->canvas_keyboard_bar_update();
-        
+
         // Reset flag
         _data.keyboard_bar_update_count = millis();
     }

@@ -1,12 +1,12 @@
 /**
  * @file esp_now_wrap.c
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-09-26
  * https://github.com/espressif/esp-now/blob/master/examples/get-started/main/app_main.c
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "esp_now_wrap.h"
 
@@ -126,9 +126,9 @@ static esp_err_t app_uart_write_handle(uint8_t *src_addr, void *data,
 
     ESP_LOGI(TAG, "espnow_recv, <%" PRIu32 "> [" MACSTR "][%d][%d][%u]: %.*s",
              count++, MAC2STR(src_addr), rx_ctrl->channel, rx_ctrl->rssi, size, size, (char *)data);
-    
 
-    // Reset 
+
+    // Reset
     _received_message_size = 0;
     memset(_received_message, 0, ESPNOW_DATA_LEN);
 
@@ -168,8 +168,8 @@ int espnow_wrap_send(uint8_t* message, size_t size)
 
     ret = espnow_send(ESPNOW_DATA_TYPE_DATA, ESPNOW_ADDR_BROADCAST, message, size, &frame_head, portMAX_DELAY);
     if (ret != ESP_OK)
-        ESP_LOGE(TAG, "shit happened : %d", ret);
-    else 
+        ESP_LOGE(TAG, "stuff happened : %d", ret);
+    else
         ESP_LOGI(TAG, "espnow_send ok, size: %u, data: %s", size, message);
 
     return ret;

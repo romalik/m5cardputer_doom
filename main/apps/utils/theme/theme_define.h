@@ -1,16 +1,16 @@
 /**
  * @file theme_define.h
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.6
  * @date 2023-09-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #pragma once
 
-#define THEME_COLOR_BG                      (uint32_t)(0x333333)
+#define THEME_COLOR_BG                      (uint32_t)(0x303033)
 #define THEME_COLOR_SYSTEM_BAR              (uint32_t)(0x99FF00)
 #define THEME_COLOR_SYSTEM_BAR_TEXT         TFT_BLACK
 #define THEME_COLOR_KB_BAR                  TFT_LIGHTGREY
@@ -39,3 +39,4 @@
 #define FONT_REPL_WIDTH                     8
 #define FONT_REPL_HEIGHT                    16
 
+#define FONT_SMALL                          &fonts::Font0

@@ -1,12 +1,12 @@
 /**
  * @file app_manager.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.2
  * @date 2023-08-19
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "app_manager.h"
 
@@ -80,7 +80,7 @@ int APP_Manager::_search_app_create_buffer(APP_BASE* app)
 
 bool APP_Manager::startApp(APP_BASE* app)
 {
-    // If not pushed into lifecycle yet 
+    // If not pushed into lifecycle yet
     // Like call createApp() and then startApp() inside an app
     int index = _search_app_create_buffer(app);
     if (index >= 0)
@@ -124,7 +124,7 @@ bool APP_Manager::startApp(APP_BASE* app)
 
 bool APP_Manager::closeApp(APP_BASE* app)
 {
-    // If not pushed into lifecycle yet 
+    // If not pushed into lifecycle yet
     // Like call createApp() and then closeApp() inside an app
     int index = _search_app_create_buffer(app);
     if (index >= 0)
@@ -136,7 +136,7 @@ bool APP_Manager::closeApp(APP_BASE* app)
     index = _search_app_lifecycle_list(app);
     if (index < 0)
         return false;
-    
+
     /* Update state */
     switch (_app_lifecycle_list[index].state)
     {
@@ -168,7 +168,7 @@ bool APP_Manager::closeApp(APP_BASE* app)
 
 void APP_Manager::update()
 {
-    /* Iterate the shit out */
+    /* Iterate the stuff out */
     for (auto iter = _app_lifecycle_list.begin(); iter != _app_lifecycle_list.end();)
     {
         /* If app wants to be started */
@@ -268,7 +268,7 @@ bool APP_Manager::destroyApp(APP_BASE* app)
         }
     }
 
-    /* Iterate the shit out */
+    /* Iterate the stuff out */
     for (auto iter = _app_lifecycle_list.begin(); iter != _app_lifecycle_list.end(); iter++)
     {
         if (iter->app == app)
@@ -295,7 +295,7 @@ bool APP_Manager::destroyApp(APP_BASE* app)
 
 void APP_Manager::destroyAllApps()
 {
-    /* Iterate the shit out */
+    /* Iterate the stuff out */
     for (auto& i : _app_lifecycle_list)
     {
         /* Call app's onPause method */

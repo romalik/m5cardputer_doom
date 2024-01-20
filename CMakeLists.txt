@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.16)
 
 
 # add_definitions(-DMC_USE_CUSTOM_CONF)
-# add_definitions(-DNO_BOOT_PLAY_SHIT)
+# add_definitions(-DNO_BOOT_PLAY_STUFF)
 
 include_directories(./main/apps/utils/usb_keyboard_wrap/hid_device)
 

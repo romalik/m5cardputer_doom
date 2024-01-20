@@ -44,7 +44,7 @@ void Launcher::_start_menu()
     _data.menu->setMenuLoopMode(true);
 
 
-    // // Fake apps 
+    // // Fake apps
     // std::vector<std::string> app_list = {
     //     "TIMER",
     //     "RECORD",
@@ -71,11 +71,11 @@ void Launcher::_start_menu()
     {
         spdlog::info("app: {} icon: {}", app->getAppName(), app->getAppIcon());
 
-        // Pass launcher 
+        // Pass launcher
         if (app->getAddr() == getAppPacker())
             continue;
-        
-        // Push items 
+
+        // Push items
         _data.menu->getMenu()->addItem(
             app->getAppName(),
             ICON_GAP + i * (ICON_WIDTH + ICON_GAP),
@@ -92,13 +92,13 @@ void Launcher::_update_menu()
 {
     if ((millis() - _data.menu_update_count) > _data.menu_update_preiod)
     {
-        // Navigate 
+        // Navigate
         if (_port_check_last_pressed())
             _data.menu->goLast();
         else if (_port_check_next_pressed())
             _data.menu->goNext();
 
-        // If pressed enter 
+        // If pressed enter
         if (_port_check_enter_pressed())
         {
             auto selected_item = _data.menu->getSelector()->getTargetItem();
@@ -106,14 +106,35 @@ void Launcher::_update_menu()
 
             spdlog::info("select: {} try create", selected_item);
 
+            // multi_heap_info_t info;
+            // heap_caps_get_info(&info, MALLOC_CAP_DEFAULT);
+            // spdlog::info("before createApp()");
+            // spdlog::info("multi_heap_info.allocated_blocks      {}", info.allocated_blocks);
+            // spdlog::info("multi_heap_info.free_blocks           {}", info.free_blocks);
+            // spdlog::info("multi_heap_info.largest_free_block    {}", info.largest_free_block);
+            // spdlog::info("multi_heap_info.minimum_free_bytes    {}", info.minimum_free_bytes);
+            // spdlog::info("multi_heap_info.total_allocated_bytes {}", info.total_allocated_bytes);
+            // spdlog::info("multi_heap_info.total_blocks          {}", info.total_blocks);
+            // spdlog::info("multi_heap_info.total_free_bytes      {}", info.total_free_bytes);
+
             // Create app
             _data._opened_app = mcAppGetFramework()->createApp(mcAppGetFramework()->getInstalledAppList()[selected_item]);
             spdlog::info("addr: {}", (void*)_data._opened_app);
 
+            // heap_caps_get_info(&info, MALLOC_CAP_DEFAULT);
+            // spdlog::info("after createApp()");
+            // spdlog::info("multi_heap_info.allocated_blocks      {}", info.allocated_blocks);
+            // spdlog::info("multi_heap_info.free_blocks           {}", info.free_blocks);
+            // spdlog::info("multi_heap_info.largest_free_block    {}", info.largest_free_block);
+            // spdlog::info("multi_heap_info.minimum_free_bytes    {}", info.minimum_free_bytes);
+            // spdlog::info("multi_heap_info.total_allocated_bytes {}", info.total_allocated_bytes);
+            // spdlog::info("multi_heap_info.total_blocks          {}", info.total_blocks);
+            // spdlog::info("multi_heap_info.total_free_bytes      {}", info.total_free_bytes);
+
             // Start app
             mcAppGetFramework()->startApp(_data._opened_app);
 
-            // Stack launcher into background 
+            // Stack launcher into background
             closeApp();
         }
 

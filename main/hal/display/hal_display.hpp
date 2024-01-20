@@ -1,12 +1,12 @@
 /**
  * @file hal_display.hpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-06-28
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #pragma once
 // #include <M5GFX.h>
@@ -70,14 +70,15 @@ class LGFX_Cardputer : public lgfx::LGFX_Device {
             cfg.pin_bl = LCD_BL_PIN;              // バックライトが接続されているピン番号
             cfg.invert = false;           // バックライトの輝度を反転させる場合 true
             // cfg.freq   = 44100;           // バックライトのPWM周波数
-            cfg.freq   = 200;           // バックライトのPWM周波数
+            cfg.freq   = 256;           // バックライトのPWM周波数
+            cfg.offset = 16;
             // cfg.freq   = 500;           // バックライトのPWM周波数
             cfg.pwm_channel = 7;          // 使用するPWMのチャンネル番号
 
             _light_instance.config(cfg);
             _panel_instance.setLight(&_light_instance);  // バックライトをパネルにセットします。
         }
-            
+
         setPanel(&_panel_instance);
     }
 };

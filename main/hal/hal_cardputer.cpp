@@ -1,12 +1,12 @@
 /**
  * @file hal_cardputer.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-09-22
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "hal_cardputer.h"
 #include "display/hal_display.hpp"
@@ -22,14 +22,15 @@ void HalCardputer::_display_init()
 {
     spdlog::info("init display");
 
-    // Display 
+    // Display
     _display = new LGFX_Cardputer;
     _display->init();
     _display->setRotation(1);
 
     // Canvas
     _canvas = new LGFX_Sprite(_display);
-    _canvas->createSprite(204, 109);
+    // _canvas->createSprite(204, 109);
+    _canvas->createSprite(206, 109);
 
     _canvas_keyboard_bar = new LGFX_Sprite(_display);
     _canvas_keyboard_bar->createSprite(_display->width() - _canvas->width(), display()->height());
@@ -52,7 +53,7 @@ void HalCardputer::_mic_init()
 
     _mic = new m5::Mic_Class;
 
-    // Configs 
+    // Configs
     auto cfg = _mic->config();
     cfg.pin_data_in = 46;
     cfg.pin_ws = 43;
@@ -82,7 +83,10 @@ void HalCardputer::_speaker_init()
     cfg.pin_ws = 43;
     cfg.i2s_port = i2s_port_t::I2S_NUM_1;
     // cfg.magnification = 1;
+    // cfg.task_pinned_core = APP_CPU_NUM;
+    // cfg.sample_rate = 96000;
     _speaker->config(cfg);
+    _speaker->begin();
 }
 
 
@@ -122,15 +126,16 @@ void HalCardputer::init()
 //             + 41515.70648 * batVcc * batVcc
 //             - 102249.34377 * batVcc
 //             + 93770.99821;
-//     if (bfb > 100) 
+//     if (bfb > 100)
 //         bfb = 100.0;
-//     else if (bfb < 0) 
+//     else if (bfb < 0)
 //         bfb = 3.0;
 
 //     return bfb;
 // }
 
 
+float __cardputer_hal_bat_v = 0;
 uint8_t HalCardputer::getBatLevel()
 {
     // spdlog::info("get bat: {}", adc_read_get_value());
@@ -142,16 +147,16 @@ uint8_t HalCardputer::getBatLevel()
 
 
     // https://docs.m5stack.com/zh_CN/core/basic_v2.7
-    double bat_v = static_cast<double>(adc_read_get_value()) * 2 / 1000;
-    spdlog::info("batV: {}", bat_v);
+    __cardputer_hal_bat_v = static_cast<float>(adc_read_get_value()) * 2 / 1000;
+    spdlog::info("batV: {}", __cardputer_hal_bat_v);
     uint8_t result = 0;
-    if (bat_v >= 4.12)
+    if (__cardputer_hal_bat_v >= 3.90)
         result = 100;
-    else if (bat_v >= 3.88)
+    else if (__cardputer_hal_bat_v >= 3.80)
         result = 75;
-    else if (bat_v >= 3.61)
+    else if (__cardputer_hal_bat_v >= 3.65)
         result = 50;
-    else if (bat_v >= 3.40)
+    else if (__cardputer_hal_bat_v >= 3.45)
         result = 25;
     else
         result = 0;
@@ -165,11 +170,11 @@ void HalCardputer::MicTest(HalCardputer* hal)
 
     int16_t mic_buffer[256];
 
-    while (1) 
+    while (1)
     {
         hal->mic()->record(mic_buffer, 256);
         while (hal->mic()->isRecording()) { vTaskDelay(5); }
-        
+
         for (int i = 0; i < 256; i++)
             printf("m:%d\n", mic_buffer[i]);
     }
@@ -183,8 +188,8 @@ void HalCardputer::SpeakerTest(HalCardputer* hal)
 {
     spdlog::info("speaker test");
 
-    // hal->Speaker()->setVolume(32);
-    hal->Speaker()->setVolume(128);
+    hal->Speaker()->setVolume(32);
+    // hal->Speaker()->setVolume(128);
 
     while (1)
     {
@@ -197,7 +202,6 @@ void HalCardputer::SpeakerTest(HalCardputer* hal)
         // hal->Speaker()->tone(5000, 200);
         // delay(500);
 
-        
 
         spdlog::info("boot 1");
         hal->Speaker()->playWav(boot_sound_1, sizeof(boot_sound_1));

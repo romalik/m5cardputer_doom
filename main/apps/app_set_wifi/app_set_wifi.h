@@ -1,12 +1,12 @@
 /**
  * @file app_set_wifi.h
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.6
  * @date 2023-09-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #pragma once
 #include <mooncake.h>
@@ -32,6 +32,10 @@ namespace MOONCAKE
                     state_wait_ssid,
                     state_wait_password,
                     state_connect,
+
+                    state_already_connected,
+                    state_whether_disable_wifi,
+
                     state_wait_quit,
                 };
 
@@ -51,9 +55,10 @@ namespace MOONCAKE
                     State_t current_state = state_init;
                     std::string wifi_ssid;
                     std::string wifi_password;
+                    bool _alreay_connected;
                 };
                 Data_t _data;
-                
+
                 void _update_input();
                 void _update_cursor();
                 void _update_state();

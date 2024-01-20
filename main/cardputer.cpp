@@ -1,13 +1,15 @@
 /**
  * @file cardputer.cpp
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.6
  * @date 2023-10-12
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
+#include <Arduino.h>
+
 #include <stdio.h>
 #include <mooncake.h>
 #include "hal/hal_cardputer.h"
@@ -22,7 +24,7 @@ HalCardputer hal;
 Mooncake mooncake;
 
 
-void _data_base_setup_callback(SIMPLEKV::SimpleKV& db) 
+void _data_base_setup_callback(SIMPLEKV::SimpleKV& db)
 {
     // DI
     db.Add<HAL::Hal*>("HAL", &hal);
@@ -35,7 +37,9 @@ void _data_base_setup_callback(SIMPLEKV::SimpleKV& db)
 // #define ON_APP_TEST_WITH_LAUNCHER 1
 extern "C" void app_main(void)
 {
-    // Init hal 
+    initArduino();
+
+    // Init hal
     hal.init();
 
 
@@ -73,7 +77,7 @@ extern "C" void app_main(void)
 
     // ------------------------------------------------------------------ //
     #elif ON_APP_TEST_WITH_LAUNCHER
-        // Init framework 
+        // Init framework
         mooncake.setDatabaseSetupCallback(_data_base_setup_callback);
         mooncake.init();
 
@@ -90,7 +94,7 @@ extern "C" void app_main(void)
         mooncake.installApp(new APPS::AppKeyboard_Packer);
 
 
-        // Create launcher 
+        // Create launcher
         mooncake.createApp(launcher);
         while (1)
             mooncake.update();
@@ -100,7 +104,7 @@ extern "C" void app_main(void)
 
 
     // ------------------------------------------------------------------ //
-    // Init framework 
+    // Init framework
     mooncake.setDatabaseSetupCallback(_data_base_setup_callback);
     mooncake.init();
 
@@ -108,20 +112,23 @@ extern "C" void app_main(void)
     auto launcher = new APPS::Launcher_Packer;
     mooncake.installApp(launcher);
 
-    // Install apps 
+    // Install apps
     mooncake.installApp(new APPS::AppWifiScan_Packer);
+    mooncake.installApp(new APPS::AppRadio_Packer);
+    mooncake.installApp(new APPS::AppTimer_Packer);
     mooncake.installApp(new APPS::AppRecord_Packer);
     mooncake.installApp(new APPS::AppChat_Packer);
     mooncake.installApp(new APPS::AppIR_Packer);
     mooncake.installApp(new APPS::AppREPL_Packer);
-    mooncake.installApp(new APPS::AppSetWiFi_Packer);
-    mooncake.installApp(new APPS::AppTimer_Packer);
     mooncake.installApp(new APPS::AppKeyboard_Packer);
+    mooncake.installApp(new APPS::AppScales_Packer);
+    mooncake.installApp(new APPS::AppENV_Packer);
+    mooncake.installApp(new APPS::AppSetWiFi_Packer);
 
-    // Create launcher 
+    // Create launcher
     mooncake.createApp(launcher);
 
-    // Update framework 
+    // Update framework
     while (1)
         mooncake.update();
     // ------------------------------------------------------------------ //
