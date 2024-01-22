@@ -471,7 +471,10 @@ void AppRadio::_setup(void) {
     preallocateBuffer = malloc(preallocateBufferSize);
     preallocateCodec = malloc(preallocateCodecSize);
     if (!preallocateBuffer || !preallocateCodec) {
-        _data.hal->display()->printf("FATAL ERROR:  Unable to preallocate %d bytes for app\n", preallocateBufferSize + preallocateCodecSize);
+        _data.hal->display()->printf("FATAL ERROR:  \nUnable to preallocate \n%d bytes for app\n\n", preallocateBufferSize + preallocateCodecSize);
+        _data.hal->display()->printf("free: %d, max couns: %d\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+        if (preallocateBuffer) free(preallocateBuffer);
+        if (preallocateCodec) free(preallocateCodec);
         delay(3000);
         return;
     }

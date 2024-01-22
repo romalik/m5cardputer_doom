@@ -53,11 +53,12 @@ void Launcher::_update_system_bar()
         //     (_data.hal->canvas_system_bar()->height() - margin_y * 2) / 2,
         //     THEME_COLOR_SYSTEM_BAR
         // );
-        _data.hal->canvas_system_bar()->fillRect(
+        _data.hal->canvas_system_bar()->fillSmoothRoundRect(
             0,  // margin_x,
             margin_y,
             _data.hal->canvas_system_bar()->width() - margin_x,   // * 2,
             _data.hal->canvas_system_bar()->height() - margin_y * 2,
+            5,
             THEME_COLOR_SYSTEM_BAR
         );
 

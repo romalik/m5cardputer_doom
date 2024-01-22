@@ -56,11 +56,12 @@ void Launcher::_update_keyboard_bar()
         //     (_data.hal->canvas_keyboard_bar()->height() - margin_y * 2) / 2,
         //     THEME_COLOR_KB_BAR
         // );
-        _data.hal->canvas_keyboard_bar()->fillRect(
+        _data.hal->canvas_keyboard_bar()->fillSmoothRoundRect(
             margin_x,
             margin_y,
             _data.hal->canvas_keyboard_bar()->width() - margin_x * 2,
             _data.hal->canvas_keyboard_bar()->height() - margin_y * 2,
+            5,
             THEME_COLOR_KB_BAR
         );
 

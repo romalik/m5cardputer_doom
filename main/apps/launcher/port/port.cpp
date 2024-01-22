@@ -117,14 +117,14 @@ bool Launcher::_port_check_last_pressed()
 }
 
 
-bool Launcher::_port_check_enter_pressed()
+bool Launcher::_port_check_key_pressed(int keynum)
 {
-    if (_data.hal->keyboard()->isKeyPressing(42))
+    if (_data.hal->keyboard()->isKeyPressing(keynum))
     {
         // _data.hal->playNextSound();
 
         // Hold till release
-        while (_data.hal->keyboard()->isKeyPressing(42))
+        while (_data.hal->keyboard()->isKeyPressing(keynum))
         {
             _data.menu->update(millis());
             _data.hal->canvas_update();

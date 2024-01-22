@@ -186,6 +186,7 @@ void AppSetWiFi::_update_state() {
             _canvas->setTextColor(TFT_GREENYELLOW, THEME_COLOR_BG);
             // _canvas->printf("Connected\nSNTP adjusting...\n");
             _canvas->printf("Connected\n");
+            _canvas->println("IP: " + WiFi.localIP().toString());
 
             // sntp_warp_init();
 

@@ -99,7 +99,7 @@ void Launcher::_update_menu()
             _data.menu->goNext();
 
         // If pressed enter
-        if (_port_check_enter_pressed())
+        else if (_port_check_key_pressed(42))
         {
             auto selected_item = _data.menu->getSelector()->getTargetItem();
             selected_item++;
@@ -136,6 +136,11 @@ void Launcher::_update_menu()
 
             // Stack launcher into background
             closeApp();
+        }
+        else if (_port_check_key_pressed(50))   // B for brightness
+        {
+            _data._brightness += 64;
+            _data.hal->display()->setBrightness(_data._brightness);
         }
 
         // Update menu

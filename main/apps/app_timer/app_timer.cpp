@@ -248,6 +248,7 @@ void AppTimer::onRunning() {
     }
 
     if (_data.hal->homeButton()->pressed()) {
+        _data.hal->Speaker()->setVolume(_data._old_volume);
         _data.hal->playNextSound();
         spdlog::info("quit timer");
         destroyApp();

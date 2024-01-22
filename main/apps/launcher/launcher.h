@@ -79,6 +79,8 @@ namespace MOONCAKE
                 uint32_t keyboard_bar_update_count = 0;
                 KeyboardBarState_t keybaord_state;
 
+                uint8_t _brightness = 127;
+
                 char string_buffer[100];
             };
             Data_t _data;
@@ -97,7 +99,7 @@ namespace MOONCAKE
             void _port_wait_enter();
             bool _port_check_next_pressed();
             bool _port_check_last_pressed();
-            bool _port_check_enter_pressed();
+            bool _port_check_key_pressed(int keynum);
             void _port_update_keyboard_state();
             void _port_update_system_state();
 
