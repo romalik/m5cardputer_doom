@@ -10,15 +10,10 @@ file(GLOB_RECURSE HAL_SRCS
     ./hal/*.cpp
 )
 
-set(PIKA_PYTHON_INCS
-    ./apps/app_repl/pikapython/pikascript-api/
-    ./apps/app_repl/pikapython/pikascript-core/
-)
-
 
 
 idf_component_register(SRCS "cardputer.cpp" ${APPS_SRCS} ${HAL_SRCS}
-                    INCLUDE_DIRS "." "./hal" ${PIKA_PYTHON_INCS})
+                    INCLUDE_DIRS "." "./hal" "./apps/app_doom/gbadoom/include")
 
 
 idf_component_get_property(tusb_lib leeebo__tinyusb_src COMPONENT_LIB)

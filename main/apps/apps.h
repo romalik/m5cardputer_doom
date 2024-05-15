@@ -10,14 +10,5 @@
  */
 #pragma once
 #include "launcher/launcher.h"
-#include "app_record/app_record.h"
-#include "app_wifi_scan/app_wifi_scan.h"
-#include "app_chat/app_chat.h"
-#include "app_ir/app_ir.h"
-#include "app_repl/app_repl.h"
 #include "app_set_wifi/app_set_wifi.h"
-#include "app_timer/app_timer.h"
-#include "app_keyboard/app_keyboard.h"
-#include "app_scales/app_scales.h"
-#include "app_env/app_env.h"
-#include "app_radio/app_radio.h"
+#include "app_doom/app_doom.h"
