@@ -1,6 +1,0 @@
-[submodule "components/arduino"]
-	path = components/arduino
-	url = https://github.com/espressif/arduino-esp32.git
-[submodule "components/ESP8266Audio"]
-	path = components/ESP8266Audio
-	url = https://github.com/WuSiYu/ESP8266Audio
