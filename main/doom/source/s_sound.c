@@ -186,8 +186,8 @@ void S_Start(void)
   // start new music for the level
   mus_paused = 0;
 
-  if (idmusnum!=-1)
-    mnum = idmusnum; //jff 3/17/98 reload IDMUS music if not -1
+  if (_g->idmusnum!=-1)
+    mnum = _g->idmusnum; //jff 3/17/98 reload IDMUS music if not -1
   else
     if (_g->gamemode == commercial)
       mnum = mus_runnin + _g->gamemap - 1;
@@ -506,18 +506,17 @@ void S_StartMusic(int m_id)
 void S_ChangeMusic(int musicnum, int looping)
 {
 
-  musicnum = 1;
   musicinfo_t *music;
-  int music_file_failed; // cournia - if true load the default MIDI music
-  char* music_filename;  // cournia
+
+
 
   //jff 1/22/98 return if music is not enabled
   if (!mus_card || nomusicparm)
     return;
 
   if (musicnum <= mus_None || musicnum >= NUMMUSIC) {
-    printf("S_ChangeMusic: Bad music number %d", musicnum);
-    I_Error("S_ChangeMusic: Bad music number %d", musicnum);
+    printf("S_ChangeMusic: Bad music number [%d], skip load\n", musicnum);
+    return;
   }
 
   music = &S_music[musicnum];
@@ -538,32 +537,13 @@ void S_ChangeMusic(int musicnum, int looping)
 
   printf("music->lumpnum: %d\n", music->lumpnum);
 
-  music_file_failed = 1;
 
 
-/*
-  // proff_fs - only load when from IWAD
-  if (lumpinfo[music->lumpnum].source == source_iwad)
-    {
-      // cournia - check to see if we can play a higher quality music file
-      //           rather than the default MIDI
-      music_filename = I_FindFile(S_music_files[musicnum], "");
-      if (music_filename)
-        {
-          music_file_failed = I_RegisterMusic(music_filename, music);
-          free(music_filename);
-        }
-    }
-*/
+  printf("S_ChangeMusic: play default MIDI music\n");
+  // load & register it
+  music->data = W_CacheLumpNum(music->lumpnum);
+  music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
-  if (music_file_failed)
-    {
-      //cournia - could not load music file, play default MIDI music
-      printf("S_ChangeMusic: play default MIDI music\n");
-      // load & register it
-      music->data = W_CacheLumpNum(music->lumpnum);
-      music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
-    }
 
   // play it
   I_PlaySong(music->handle, looping);

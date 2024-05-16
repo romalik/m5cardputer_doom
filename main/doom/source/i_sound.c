@@ -63,7 +63,7 @@
 
 #include "global_data.h"
 #include "oplplayer.h"
-#include "mus2mid.h"
+
 
 static const music_player_t *music_player = &opl_synth_player;
 static bool musicPlaying = false;
@@ -408,7 +408,7 @@ void IRAM_ATTR I_UpdateSound( void )
   // Mixing channel index.
   int				chan;
     
-    int16_t stream[2];
+    int16_t stream[2] = {0};
 
     // Left and right channel
     //  are in global mixbuffer, alternating.
@@ -439,8 +439,8 @@ void IRAM_ATTR I_UpdateSound( void )
             //  for this channel (sound)
             //  to the current data.
             // Adjust volume accordingly.
-            dl += sample >> 4; //<< channelleftvol_lookup[ chan ])>>16;
-            dr += sample >> 4; //<< channelleftvol_lookup[ chan ])>>16;
+            dl += (sample >> 2) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
+            dr += (sample >> 2) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
             //dr += (int)(((float)channelrightvol_lookup[ chan ]/(float)250)*(float)sample);
             // Increment index ???
             channels[ chan ] += 1;
@@ -455,14 +455,27 @@ void IRAM_ATTR I_UpdateSound( void )
             {
                 music_player->render(&stream, 1); // It returns 2 (stereo) 16bits values per sample
                 int m_sample = stream[0]; // [0] and [1] are the same value
-                if (sample > 0)
+                if (m_sample > 0)
                 {
-                    int v = m_sample / (16 - _g->snd_MusicVolume);
+                    int v = (m_sample >> 4) / (16 - _g->snd_MusicVolume);
+                    //printf("v: %d\n");
                     dl += v;
                     dr += v;
                 }
             }
       
+      if(dl > 32767) {
+        dl = 32767;
+      }
+      if(dl < -32768) {
+        dl = -32768;
+      }
+      if(dr > 32767) {
+        dl = 32767;
+      }
+      if(dr < -32768) {
+        dl = -32768;
+      }
       *leftout = dl;
       *(leftout+1) = dl;    
 
@@ -491,6 +504,10 @@ void IRAM_ATTR updateTask(void *arg)
     //xSemaphoreTake(dmaChannel2Sem, portMAX_DELAY);
     I_UpdateSound();
     //printf("sound: updateTask()\n");
+    //for(int i = 0; i<SAMPLECOUNT*SAMPLESIZE; i++) {
+    //  printf("%d ", mixbuffer[i]);
+    //}
+    //printf("\n");
     i2s_write(I2S_NUM_1, mixbuffer, SAMPLECOUNT*SAMPLESIZE, &bytesWritten, portMAX_DELAY);
     //__play_sound(mixbuffer, SAMPLECOUNT*SAMPLESIZE);
     //xSemaphoreGive(dmaChannel2Sem);
@@ -657,12 +674,12 @@ int I_RegisterSong(const void *data, size_t len)
     size_t midlen;
     int handle = 0;
 
+/*
     if (mus2mid(data, len, &mid, &midlen, 64) == 0)
         handle = (int)music_player->registersong(mid, midlen);
     else
-        handle = (int)music_player->registersong(data, len);
-
-    free(mid);
+*/
+    handle = (int)music_player->registersong(data, len);
 
     return handle;
 }

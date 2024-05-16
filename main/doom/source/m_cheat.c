@@ -37,7 +37,7 @@ typedef struct c_cheat
 static const c_cheat cheat_def[] =
 {
     {"Chainsaw",        CHEAT_SEQ(KEYD_L,   KEYD_UP,    KEYD_UP,    KEYD_LEFT,  KEYD_L,     KEYD_SELECT,    KEYD_SELECT,    KEYD_UP),       cheat_choppers},
-    {"God mode",        CHEAT_SEQ(KEYD_UP,  KEYD_UP,    KEYD_DOWN,  KEYD_DOWN,  KEYD_LEFT,  KEYD_LEFT,      KEYD_RIGHT,     KEYD_RIGHT),    cheat_god},
+    {"God mode",        CHEAT_SEQ('i',  'd',    'd',  'q',  'd',  'a',      'a',     'a'),    cheat_god},
     {"Ammo & Keys",     CHEAT_SEQ(KEYD_L,   KEYD_LEFT,  KEYD_R,     KEYD_RIGHT, KEYD_SELECT,KEYD_UP,        KEYD_SELECT,    KEYD_UP),       cheat_idkfa},
     {"Ammo",            CHEAT_SEQ(KEYD_R,   KEYD_R,     KEYD_SELECT,KEYD_R,     KEYD_SELECT,KEYD_UP,        KEYD_UP,        KEYD_LEFT),     cheat_ammo},
     {"No Clipping",     CHEAT_SEQ(KEYD_UP,  KEYD_DOWN,  KEYD_LEFT,  KEYD_RIGHT, KEYD_UP,    KEYD_DOWN,      KEYD_LEFT,      KEYD_RIGHT),    cheat_noclip},

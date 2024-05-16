@@ -73,7 +73,7 @@ void Z_Init (void)
 {
     memblock_t*	block;
 
-    //void reserved = malloc(50000);
+
 
     unsigned int heapSize = maxHeapSize;
 
@@ -105,7 +105,7 @@ void Z_Init (void)
 
     block->size = heapSize - sizeof(memzone_t);
     _z_heap_size = heapSize;
-    //free(reserved);
+
 }
 
 

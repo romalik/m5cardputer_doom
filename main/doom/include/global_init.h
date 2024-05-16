@@ -65,7 +65,7 @@ _g->freehead = &_g->freetail;     // killough
 _g->snd_SfxVolume = 15;
 
 // Maximum volume of music. Useless so far.
-_g->snd_MusicVolume = 15;
+_g->snd_MusicVolume = 8;
 
 
 //******************************************************************************

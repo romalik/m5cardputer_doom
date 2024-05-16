@@ -28,7 +28,7 @@ LGFX_Sprite * doom_canvas;
 
 KEYBOARD::Keyboard* __keyboard;
 
-bool scale = false;
+bool scale = true;
 
 void __update_sprite() {
 
