@@ -74,7 +74,7 @@ void HalCardputer::_mic_init()
 void HalCardputer::_speaker_init()
 {
     spdlog::info("init speaker");
-
+return;
     _speaker = new m5::Speaker_Class;
 
     auto cfg = _speaker->config();
@@ -85,8 +85,11 @@ void HalCardputer::_speaker_init()
     // cfg.magnification = 1;
     // cfg.task_pinned_core = APP_CPU_NUM;
     // cfg.sample_rate = 96000;
+    cfg.sample_rate = 11025;
+    
+
     _speaker->config(cfg);
-    _speaker->begin();
+    //_speaker->begin();
 }
 
 

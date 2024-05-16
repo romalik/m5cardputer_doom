@@ -198,6 +198,13 @@ unsigned char __get_event() {
 
 }
 
+m5::Speaker_Class* __speaker;
+
+extern "C" void __play_sound(unsigned char * buf, unsigned int size) {
+  printf("__play_sound(%p %d) [%d %d %d %d %d %d]\n", buf,size,buf[0],buf[1],buf[2],buf[3],buf[4],buf[5]);
+  __speaker->playRaw(buf,size,11025U, false, 1);
+}
+
 void AppDOOM::onCreate() {
     spdlog::info("{} onCreate", getAppName());
 
@@ -220,6 +227,11 @@ void AppDOOM::onCreate() {
     __keyboard = _keyboard;
 
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
+
+    //_data.hal->Speaker()->setVolume(255);
+    //_data.hal->Speaker()->tone(440,500);
+
+    __speaker = _data.hal->Speaker();
 
     _canvas->setTextColor(TFT_ORANGE, THEME_COLOR_BG);
     _canvas->printf("Doom\n");

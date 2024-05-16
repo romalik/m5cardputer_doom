@@ -158,7 +158,7 @@ void I_ProcessKeyEvents()
 
 void I_Error (const char *error, ...)
 {
-
+    printf("I_Error: %s\n", error);
 }
 
 //**************************************************************************************

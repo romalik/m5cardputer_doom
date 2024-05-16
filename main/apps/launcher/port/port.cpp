@@ -56,7 +56,7 @@ void Launcher::_port_wait_enter()
         _data.hal->keyboard()->updateKeyList();
         if (_data.hal->keyboard()->keyList().size())
         {
-            _data.hal->playNextSound();
+            //_data.hal->playNextSound();
 
             // Hold till release
             while (_data.hal->keyboard()->keyList().size())
@@ -220,14 +220,16 @@ void Launcher::_port_update_keyboard_state()
     // Key sound stuff
     if (_data.hal->keyboard()->keyList().size() != _last_key_num)
     {
-        if (_data.hal->keyboard()->keyList().size() == 0)
-            _data.hal->playLastSound();
+        if (_data.hal->keyboard()->keyList().size() == 0){
+            //_data.hal->playLastSound();
+        } 
         else
-        {
+        {/*
             if (_is_special_key_pressed)
                 _data.hal->playKeyboardSound();
             else
                 _data.hal->playNextSound();
+                */
         }
 
         _last_key_num = _data.hal->keyboard()->keyList().size();

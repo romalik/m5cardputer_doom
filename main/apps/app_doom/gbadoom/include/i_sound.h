@@ -37,21 +37,54 @@
 #include "sounds.h"
 #include "doomtype.h"
 
+#define SNDSERV
+#undef SNDINTR
+
+#ifndef SNDSERV
+#include "l_soundgen.h"
+#endif
+
 // Init at program start...
 void I_InitSound(void);
+
+// ... shut down and relase at program termination.
+void I_ShutdownSound(void);
 
 //
 //  SFX I/O
 //
 
+// Initialize channels?
+void I_SetChannels(void);
+
+// Get raw data lump index for sound descriptor.
+int I_GetSfxLumpNum (sfxinfo_t *sfxinfo);
 
 // Starts a sound in a particular sound channel.
-int I_StartSound(int id, int channel, int vol, int sep);
+int I_StartSound(int id, int channel, int vol, int sep, int pitch, int priority);
 
+// Stops a sound channel.
+void I_StopSound(int handle);
+
+// Called by S_*() functions
+//  to see if a channel is still playing.
+// Returns 0 if no longer playing, 1 if playing.
+int I_SoundIsPlaying(int handle);
+
+// Called by m_menu.c to let the quit sound play and quit right after it stops
+int I_AnySoundStillPlaying(void);
+
+// Updates the volume, separation,
+//  and pitch of a sound channel.
+void I_UpdateSoundParams(int handle, int vol, int sep, int pitch);
 
 //
 //  MUSIC I/O
 //
+void I_InitMusic(void);
+void I_ShutdownMusic(void);
+
+void I_UpdateMusic(void);
 
 // Volume.
 void I_SetMusicVolume(int volume);
@@ -59,6 +92,12 @@ void I_SetMusicVolume(int volume);
 // PAUSE game handling.
 void I_PauseSong(int handle);
 void I_ResumeSong(int handle);
+
+// Registers a song handle to song data.
+int I_RegisterSong(const void *data, size_t len);
+
+// cournia - tries to load a music file
+int I_RegisterMusic( const char* filename, musicinfo_t *music );
 
 // Called by anything that wishes to start music.
 //  plays a song, and when the song is done,
@@ -69,20 +108,13 @@ void I_PlaySong(int handle, int looping);
 // Stops a song over 3 seconds.
 void I_StopSong(int handle);
 
+// See above (register), then think backwards
+void I_UnRegisterSong(int handle);
+
+// Allegro card support jff 1/18/98
+extern int snd_card;
+extern int mus_card;
 // CPhipps - put these in config file
-extern const int snd_samplerate;
-
-
-typedef struct
-{
-    const char* data;
-    const char* enddata;
-    int vol;
-
-} channel_info_t;
-
-#define MUSIC_BUFFER_SAMPLES 2048
-#define MAX_CHANNELS    8
-
+extern int snd_samplerate;
 
 #endif

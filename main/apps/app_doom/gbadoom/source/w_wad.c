@@ -125,6 +125,8 @@ static int PUREFUNC FindLumpByName(const char* name, const filelump_t** lump)
     const wadinfo_t* header;
     const filelump_t  *fileinfo;
 
+    
+
     if(doom_iwad_len > 0)
     {
         header = (const wadinfo_t*)&doom_iwad[0];
@@ -132,8 +134,14 @@ static int PUREFUNC FindLumpByName(const char* name, const filelump_t** lump)
         fileinfo = (filelump_t*)&doom_iwad[header->infotableofs];
 
         int_64_t nameint = 0;
-        strncpy((char*)&nameint, name, 8);
-
+        //strncpy((char*)&nameint, name, 8);
+        char *s = name;
+        char n = 0;
+        while(*s) {
+            if(n == 8) break;
+            *((char*)&nameint + n) = toupper(*s);
+            s++; n++;
+        }
         for(int i = header->numlumps - 1; i >= 0; i--)
         {
             //This is a bit naughty with alignment.
@@ -211,10 +219,14 @@ int PUREFUNC W_CheckNumForName(const char *name)
 //
 int PUREFUNC W_GetNumForName(const char* name)     // killough -- const added
 {
+    //printf("Try find %s\n", name);
+
     int i = W_CheckNumForName (name);
 
-    if (i == -1)
+    if (i == -1) {
+        printf("Cannot find %s\n", name);
         I_Error("W_GetNumForName: %.8s not found", name);
+    }
 
     return i;
 }

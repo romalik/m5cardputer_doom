@@ -651,7 +651,7 @@ vissprite_t vissprites[MAXVISSPRITES];
 //******************************************************************************
 
 // the set of channels available
-channel_t *channels;
+//channel_t *channels;
 
 // These are not used, but should be (menu).
 // Maximum volume of a sound effect.
