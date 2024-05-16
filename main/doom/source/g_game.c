@@ -243,6 +243,52 @@ void G_BuildTiccmd(ticcmd_t* cmd)
         cmd->buttons |= BT_USE;
     }
 
+    int change_rq = -1;
+    for(int i = '1'; i <= '7'; i++) {
+        if(_g->gamekeydown[i]) {
+            change_rq = i - '1';
+        }
+    }
+
+    if (change_rq > 0)
+    {
+        // The actual changing of the weapon is done
+        //  when the weapon psprite can do it
+        //  (read: not in the middle of an attack).
+        newweapon = change_rq;
+        
+        if (newweapon == wp_fist
+            && _g->player.weaponowned[wp_chainsaw]
+            && !(_g->player.readyweapon == wp_chainsaw
+            && _g->player.powers[pw_strength]))
+        {
+            newweapon = wp_chainsaw;
+        }
+        
+        if ( (_g->gamemode == commercial)
+            && newweapon == wp_shotgun 
+            && _g->player.weaponowned[wp_supershotgun]
+            && _g->player.readyweapon != wp_supershotgun)
+        {
+            newweapon = wp_supershotgun;
+        }
+        
+
+        if (_g->player.weaponowned[newweapon]
+            && newweapon != _g->player.readyweapon)
+        {
+            // Do not go to plasma or BFG in shareware,
+            //  even if cheated.
+            if ((newweapon != wp_plasma
+            && newweapon != wp_bfg)
+            || (_g->gamemode != shareware) )
+            {
+            _g->player.pendingweapon = newweapon;
+            }
+        }
+    }
+
+
     // Toggle between the top 2 favorite weapons.                   // phares
     // If not currently aiming one of these, switch to              // phares
     // the favorite. Only switch if you possess the weapon.         // phares

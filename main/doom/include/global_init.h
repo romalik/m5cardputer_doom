@@ -32,6 +32,7 @@ _g->oldgamestate = -1;
 _g->gamemode = indetermined;
 _g->gamemission = doom;
 
+_g->cheat_buffer[0] = 0;
 
 //******************************************************************************
 //m_menu.c

@@ -17,6 +17,7 @@ static void cheat_invisibility(void);
 static void cheat_map(void);
 static void cheat_goggles(void);
 static void cheat_exit(void);
+static void cheat_idc(void);
 static void cheat_rockets(void);
 static void cheat_fps(void);
 
@@ -26,19 +27,19 @@ typedef struct c_cheat
 {
     char* name;
     byte sequence[8];
-    unsigned int packed_sequence;
+
     void (*cheat_function)(void);
 } c_cheat;
 
-#define CHEAT_PACK(a,b,c,d,e,f,g,h) ((a << 28)|(b << 24)|(c << 20)|(d << 16)|(e << 12)|(f << 8)|(g << 4)|(h))
 
-#define CHEAT_SEQ(a,b,c,d,e,f,g,h) {a,b,c,d,e,f,g,h}, CHEAT_PACK(a,b,c,d,e,f,g,h)
+
+#define CHEAT_SEQ(a,b,c,d,e,f,g,h) {a,b,c,d,e,f,g,h}
 
 static const c_cheat cheat_def[] =
 {
-    {"Chainsaw",        CHEAT_SEQ(KEYD_L,   KEYD_UP,    KEYD_UP,    KEYD_LEFT,  KEYD_L,     KEYD_SELECT,    KEYD_SELECT,    KEYD_UP),       cheat_choppers},
-    {"God mode",        CHEAT_SEQ('i',  'd',    'd',  'q',  'd',  'a',      'a',     'a'),    cheat_god},
-    {"Ammo & Keys",     CHEAT_SEQ(KEYD_L,   KEYD_LEFT,  KEYD_R,     KEYD_RIGHT, KEYD_SELECT,KEYD_UP,        KEYD_SELECT,    KEYD_UP),       cheat_idkfa},
+    {"God mode",        CHEAT_SEQ('d','q','d','d','i',0,0,0), cheat_god},
+    {"Ammo & Keys",     CHEAT_SEQ('a','f','k','d','i',0,0,0), cheat_idkfa},
+    {"Ammo & Keys",     CHEAT_SEQ(0,0,'c','d','i',0,0,0),     cheat_idc},
     {"Ammo",            CHEAT_SEQ(KEYD_R,   KEYD_R,     KEYD_SELECT,KEYD_R,     KEYD_SELECT,KEYD_UP,        KEYD_UP,        KEYD_LEFT),     cheat_ammo},
     {"No Clipping",     CHEAT_SEQ(KEYD_UP,  KEYD_DOWN,  KEYD_LEFT,  KEYD_RIGHT, KEYD_UP,    KEYD_DOWN,      KEYD_LEFT,      KEYD_RIGHT),    cheat_noclip},
     {"Invincibility",   CHEAT_SEQ(KEYD_A,   KEYD_B,     KEYD_L,     KEYD_R,     KEYD_L,     KEYD_R,         KEYD_SELECT,    KEYD_SELECT),   cheat_invincibility},
@@ -59,16 +60,33 @@ static boolean CheckCheats(unsigned int keybuff)
 {
     for(int i = 0; i < num_cheats; i++)
     {
-        if(cheat_def[i].packed_sequence == keybuff)
-        {
+        int match = 1;
+        for(int k = 0; k<8; k++) {
+            if(cheat_def[i].sequence[k] == 0) {
+                continue;
+            }
+
+            if(cheat_def[i].sequence[k] != _g->cheat_buffer[k]) {
+                match = 0;
+                break;
+            }
+        }
+
+        if(match) {
             if(cheat_def[i].cheat_function)
                 cheat_def[i].cheat_function();
-
             return true;
         }
     }
 
     return false;
+}
+
+void push_to_cheat_buffer(char c) {
+    for(int i = 7; i>0; i--) {
+        _g->cheat_buffer[i] = _g->cheat_buffer[i-1];
+    }
+    _g->cheat_buffer[0] = c;
 }
 
 boolean C_Responder (event_t *ev)
@@ -88,12 +106,9 @@ boolean C_Responder (event_t *ev)
 
         //We can test a cheat sequence with a simple int comparison.
 
-        unsigned int cb = _g->cheat_buffer << 4;
-        cb |= ev->data1 & 0xf;
-
-        _g->cheat_buffer = cb;
-
-        if(CheckCheats(cb))
+        push_to_cheat_buffer(ev->data1);
+        printf("Cheat buffer: %s\n", _g->cheat_buffer);
+        if(CheckCheats(_g->cheat_buffer))
             return true; //eat last cheat key.
     }
 
@@ -232,6 +247,51 @@ static void cheat_goggles()
 static void cheat_exit()
 {
     G_ExitLevel();
+}
+static void cheat_idc()
+{
+    int		epsd;
+    int		map;
+
+
+    if (_g->gamemode == commercial)
+    {
+        epsd = 0;
+        map = (_g->cheat_buffer[1] - '0')*10 + _g->cheat_buffer[0] - '0';
+    }
+    else
+    {
+        epsd = _g->cheat_buffer[1] - '0';
+        map = _g->cheat_buffer[0] - '0';
+    }
+
+    // Catch invalid maps.
+    if (epsd < 1)
+        return;
+
+    if (map < 1)
+        return;
+
+    // Ohmygod - this is not going to work.
+    if ((_g->gamemode == retail)
+    && ((epsd > 4) || (map > 9)))
+        return;
+
+    if ((_g->gamemode == registered)
+    && ((epsd > 3) || (map > 9)))
+        return;
+
+    if ((_g->gamemode == shareware)
+    && ((epsd > 1) || (map > 9)))
+        return;
+
+    if ((_g->gamemode == commercial)
+        && (( epsd > 1) || (map > 34)))
+        return;
+
+    // So be it.
+    G_DeferedInitNew(_g->gameskill, epsd, map);
+   
 }
 
 static void cheat_rockets()
