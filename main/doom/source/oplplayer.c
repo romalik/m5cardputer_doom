@@ -1365,7 +1365,7 @@ static const void *I_OPL_RegisterSong(const void *data, unsigned len)
 
     if (result == NULL)
     {
-        lprintf (LO_WARN, "I_OPL_RegisterSong: Failed to load MID.\n");
+        printf ("I_OPL_RegisterSong: Failed to load MID.\n");
     }
 
 

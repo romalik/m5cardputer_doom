@@ -721,7 +721,7 @@ static void D_DoomMainSetup(void)
 
     _g->fps_show = false;
 
-    _g->highDetail = false;
+    _g->highDetail = true;
 
     I_InitGraphics();
 

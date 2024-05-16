@@ -439,8 +439,8 @@ void IRAM_ATTR I_UpdateSound( void )
             //  for this channel (sound)
             //  to the current data.
             // Adjust volume accordingly.
-            dl += (sample >> 2) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
-            dr += (sample >> 2) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
+            dl += (sample >> 4) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
+            dr += (sample >> 4) / (16 - _g->snd_SfxVolume); //<< channelleftvol_lookup[ chan ])>>16;
             //dr += (int)(((float)channelrightvol_lookup[ chan ]/(float)250)*(float)sample);
             // Increment index ???
             channels[ chan ] += 1;

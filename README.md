@@ -1,36 +1,51 @@
-# M5Cardputer-UserDemo-Plus
-Official firmware enhanced
- 
-- add arduino-esp32 as a ESP-IDF component for easier development
-  - porting some native but messy code to Arduino lib to avoid crash
-- porting @cyberwisk's cardputer WebRadio as an App
-  - using a modded version of ESP8266Audio to support https and chunked stream (like qtfm.cn)
-  - ability to play radio in background when pressing HOME (G0), press ESC to fully exit
-  - more radios (you can modify the radio list at (main/apps/app_radio/M5Cardputer_WebRadio.cpp)
-- enhance SCAN, TIMER (renamed to CLOCK), SetWiFi App
-- add SCALES and ENV IV App for the mini-scales and ENV IV m5stack sensors
-- system enhance
-  - WiFi will remain connected in background in default, open SetWiFi App again to turn off
-  - use ESP-IDF's automatic sntp
-  - enhance system bar
-    - show battery voltage and current free heep size
-    - add real feature to WiFi icon
+# Doom!
+This is Doom for M5 Cardputer
 
-# M5Cardputer-UserDemo
-M5Cardputer user demo for hardware evaluation.
+Cardputer does not have PSRAM, so things get tricky
 
-#### Tool Chains
+Is mostly a port of [prBoom Port to GBA](https://github.com/doomhack/GBADoom) by doomhack
 
-[ESP-IDF v4.4.6](https://docs.espressif.com/projects/esp-idf/en/v4.4.6/esp32/index.html)
+HAL was taken from [M5 Official User Demo](https://github.com/m5stack/M5Cardputer-UserDemo)
+
+Some parts collected from [Retro-Go](https://github.com/ducalex/retro-go) project
+
+Can work with original WADs after their conversion with GbaWadUtil, also lended from doomhack.
+
+WAD is compiled into binary itself
+
+#### Done
+ - User input
+ - Sounds (SFX)
+ - Music
+
+#### To do
+ - Load WAD from SD card (somehow, mmap?)
+ - Optimize user input
+ - Save & Load
 
 #### Build
 
 ```bash
-git clone https://github.com/m5stack/M5Cardputer-UserDemo
-```
-```bash
-cd M5Cardputer-UserDemo
+git clone https://github.com/romalik/m5cardputer_doom
 ```
 ```bash
 idf.py build
+```
+```bash
+idf.py flash -p /dev/ttyACM0
+```
+
+
+#### Wad Util
+
+```bash
+mkdir build
+cd build
+qmake ../GbaWadUtil.pro
+make
+cd ..
+ # place doom1.wad file somewhere near here
+ # gbadoom.wad is needed to cover missing assets
+./build/GbaWadUtil -in doom1.wad -out gdoom1.wad -cfile doom1.c -pwad ./gbadoom.wad
+ # place doom1.c to main/doom/source/iwad/ and recompile the firmware
 ```
