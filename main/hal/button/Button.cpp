@@ -7,7 +7,7 @@
 #include "Button.h"
 // #include <Arduino.h>
 #include <driver/gpio.h>
-#include "../../apps/utils/common_define.h"
+#include "../common_define.h"
 
 Button::Button(uint8_t pin, uint16_t debounce_ms)
 :  _pin(pin)

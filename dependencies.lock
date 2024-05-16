@@ -16,12 +16,6 @@ dependencies:
     source:
       type: idf
     version: 4.4.6
-  leeebo/tinyusb_src:
-    component_hash: 3b0258364a1d8190106bdfb9043a82d4f8a0f9058561b7ba547f80ae7ef61045
-    source:
-      service_url: https://api.components.espressif.com/
-      type: service
-    version: 0.16.0~3
-manifest_hash: 184216e99fcdda34b540d302458e0f82f6f8b938c7bac0f138e740f2de28189d
+manifest_hash: b9300eaf26ee23a8a808de2a13fe0c49443b76126b1a57d5f33abb9d1a94db73
 target: esp32s3
 version: 1.0.0
