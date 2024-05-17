@@ -174,10 +174,10 @@ void check_evts() {
     }
 */
 
-    printf("kb_state: ");
+    //printf("kb_state: ");
     for(int i = 0; i<14*4; i++) {
         uint8_t v = keymap[i];
-        
+        /*
         if(kb_state[i]) {
             if(v == K_ENT) {
                 printf("[ENT]");
@@ -199,11 +199,12 @@ void check_evts() {
                 printf("[%c]",v);
             }
         }
+        */
         if(old_state[i] != kb_state[i]) {
             evt_queue.push((kb_state[i] << 7) | (v&0x7f));
         }
     }
-    printf("\n");
+    //printf("\n");
 
 }
 
@@ -223,10 +224,96 @@ unsigned char __get_event() {
 
 extern "C" int doom_main(int argc, const char * argv);
 
+#include <driver/sdmmc_host.h>
+#include <esp_vfs_fat.h>
+
+// Storage
+#define RG_STORAGE_DRIVER           1                   // 0 = Host, 1 = SDSPI, 2 = SDMMC, 3 = USB, 4 = Flash
+#define RG_STORAGE_HOST             SPI3_HOST   // Used by driver 1 and 2
+#define RG_STORAGE_SPEED            SDMMC_FREQ_DEFAULT  // Used by driver 1 and 2
+#define RG_STORAGE_ROOT             "/sd"               // Storage mount point
+
+// SPI SD Card
+#define RG_GPIO_SDSPI_MISO          GPIO_NUM_39
+#define RG_GPIO_SDSPI_MOSI          GPIO_NUM_14
+#define RG_GPIO_SDSPI_CLK           GPIO_NUM_40
+#define RG_GPIO_SDSPI_CS            GPIO_NUM_12
+/*
+static esp_err_t sdcard_do_transaction(int slot, sdmmc_command_t *cmdinfo)
+{
+    esp_err_t ret = sdspi_host_do_transaction(slot, cmdinfo);
+    return ret;
+}
+*/
+static esp_err_t init_sd() {
+    sdmmc_host_t host_config = SDSPI_HOST_DEFAULT();
+    host_config.slot = RG_STORAGE_HOST;
+    host_config.max_freq_khz = RG_STORAGE_SPEED;
+    host_config.do_transaction = &sdspi_host_do_transaction;
+    esp_err_t err;
+
+    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    slot_config.host_id = RG_STORAGE_HOST;
+    slot_config.gpio_cs = RG_GPIO_SDSPI_CS;
+    spi_bus_config_t bus_cfg = {
+        .mosi_io_num = RG_GPIO_SDSPI_MOSI,
+        .miso_io_num = RG_GPIO_SDSPI_MISO,
+        .sclk_io_num = RG_GPIO_SDSPI_CLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+    };
+
+    err = spi_bus_initialize(RG_STORAGE_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
+    if (err != ESP_OK) // check but do not abort, let esp_vfs_fat_sdspi_mount decide
+        printf("SPI bus init failed (0x%x)", err);
+
+    esp_vfs_fat_mount_config_t mount_config = {.max_files = 8};
+
+    err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
+    if (err == ESP_ERR_TIMEOUT || err == ESP_ERR_INVALID_RESPONSE || err == ESP_ERR_INVALID_CRC)
+    {
+        printf("SD Card mounting failed (0x%x), retrying at lower speed...\n", err);
+        host_config.max_freq_khz = SDMMC_FREQ_PROBING;
+        err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
+    }
+    return err;
+}
+
+#include <dirent.h>
+
+void listdir(const char *name, int indent)
+{
+    DIR *dir;
+    struct dirent *entry;
+
+    if (!(dir = opendir(name)))
+        return;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR) {
+            char path[1024];
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
+            snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
+            printf("%*s[%s]\n", indent, "", entry->d_name);
+            listdir(path, indent + 2);
+        } else {
+            printf("%*s- %s\n", indent, "", entry->d_name);
+        }
+    }
+    closedir(dir);
+}
+
 #include "hal/display/hal_display.hpp"
 extern "C" void app_main(void)
 {
-    printf("Startup\n");
+    printf("Init SD\n");
+    if(!init_sd() == ESP_OK) {
+        printf("SD Init Failed!\n");
+        while(1){}
+    }
+    delay(500);
+
     kb_init(kb_output_list, kb_input_list);
 
     printf("initCanvas\n");
@@ -239,11 +326,27 @@ extern "C" void app_main(void)
     
     doom_canvas->createSprite(240,160);
     
-
+    doom_canvas->fillScreen(0xffffffff);
+    doom_canvas->pushSprite(0,0);
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
+    delay(500);
+
+
+
+    printf("List root:\n");
+
+    listdir("/sd", 0);
+
+    doom_canvas->fillScreen(0x4488aacc);
+    doom_canvas->pushSprite(0,0);
+
+    printf("Write file\n");
+    FILE * f = fopen("/sd/testfile", "w");
+    fwrite("test text", 10, 1, f);
+    fclose(f);
+    listdir("/sd", 0);
 
     printf("Launch DOOM\n");
-
     doom_main(0,0);
 
 }

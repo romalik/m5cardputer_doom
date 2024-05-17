@@ -893,139 +893,208 @@ void G_ForcedLoadGame(void)
 }
 
 
-//
-// Update the strings displayed in the load-save menu.
-//
-void G_UpdateSaveGameStrings()
-{
-    unsigned int savebuffersize = sizeof(gba_save_data_t) * 8;
 
 
-    byte* loadbuffer = Z_Malloc(savebuffersize, PU_STATIC, NULL);
+char	savename[24];
 
-    LoadSRAM(loadbuffer, savebuffersize, 0);
+void G_LoadGame (int slot, boolean is_cmd) 
+{ 
+    printf("G_LoadGame(%d)\n", slot);
+    sprintf (savename,"/sd/DOOM%d.dsg", slot);
+    _g->gameaction = ga_loadgame; 
+} 
+ 
+#define VERSIONSIZE		16 
+#include <fcntl.h>
 
-    gba_save_data_t* saveslots = (gba_save_data_t*)loadbuffer;
+FILE * savefile;
+void wb(char b) {
+    fwrite(&b,1,1,savefile);
+}
+void ww(short b) {
+    fwrite(&b,2,1,savefile);
+}
+void wr(char * b, unsigned int sz) {
+    fwrite(b,sz,1,savefile);
+}
+void rb(char * b) {
+    fread(b,1,1,savefile);
+}
+void rw(short * b) {
+    fread((char *)b,2,1,savefile);
+}
+void rr(char * b, unsigned int sz) {
+    fread(b,sz,1,savefile);
+}
+void rseek(unsigned int sz) {
+    fseek(savefile, sz, SEEK_CUR);
+}
+extern char * save_p;
+void G_DoLoadGame (void) 
+{ 
+    int		length; 
+    int		i; 
+    int		a,b,c; 
+	printf("G_DoLoadGame()\n");
+    printf("savename: %s\n", savename);
+    savefile = fopen(savename, "r");
+    printf("savefile: %p\n", savefile);
+    _g->gameaction = ga_nothing; 
+	
+    length = 0;//M_ReadFile (savename, &_g->savebuffer); 
+    char dummy[16];
 
-    for(int i = 0; i < 8; i++)
-    {
-        if(saveslots[i].save_present != 1)
-        {
-            strcpy(_g->savegamestrings[i], "EMPTY");
-        }
-        else
-        {
-            if(_g->gamemode == commercial)
-            {
-                strcpy(_g->savegamestrings[i], "MAP ");
+    //save_p = _g->savebuffer + SAVESTRINGSIZE;
+    //rseek(SAVESTRINGSIZE);    
+    rr(dummy,SAVESTRINGSIZE);
+    // skip the description field 
+    printf("description: %s\n",dummy);
 
-                itoa(saveslots[i].gamemap, &_g->savegamestrings[i][4], 10);
-            }
-            else
-            {
-                strcpy(_g->savegamestrings[i], "ExMy");
+    //save_p += VERSIONSIZE; 
+	//rseek(VERSIONSIZE);
+    rr(dummy, VERSIONSIZE);
 
-                _g->savegamestrings[i][1] = '0' + saveslots[i].gameepisode;
-                _g->savegamestrings[i][3] = '0' + saveslots[i].gamemap;
-            }
-        }
+    printf("version: %s\n",dummy);
+
+    rb(&_g->gameskill);
+    rb(&_g->gameepisode);
+    rb(&_g->gamemap);
+    rb(&_g->playeringame);
+
+    // load a base level 
+    G_InitNew (_g->gameskill, _g->gameepisode, _g->gamemap); 
+ 
+    // get the times 
+    rb(&a); 
+    rb(&b); 
+    rb(&c); 
+    _g->leveltime = (a<<16) + (b<<8) + c; 
+	 
+    // dearchive all the modifications
+    printf("Position in file: %ld\n", ftell(savefile));
+    printf("P_UnArchivePlayers:\n");
+    P_UnArchivePlayers (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+    printf("P_UnArchiveWorld:\n");
+    P_UnArchiveWorld (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+    printf("P_UnArchiveThinkers:\n");
+    P_UnArchiveThinkers (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+    printf("P_UnArchiveSpecials:\n");
+    P_UnArchiveSpecials (); 
+ 
+    char s;
+
+    rb(&s);
+    if (s != 0x1d) {
+	    printf("Savegame end byte mismatch\n");
+        I_Error ("Bad savegame");
     }
+    printf("Total read from file: %ld\n", ftell(savefile));
 
-    Z_Free(loadbuffer);
-}
-
-// killough 3/16/98: add slot info
-// killough 5/15/98: add command-line
-void G_LoadGame(int slot, boolean command)
-{  
-    _g->savegameslot = slot;
-    _g->demoplayback = false;
-
-    G_DoLoadGame();
-}
-
-void G_DoLoadGame()
-{
-    unsigned int savebuffersize = sizeof(gba_save_data_t) * 8;
-
-
-    byte* loadbuffer = Z_Malloc(savebuffersize, PU_STATIC, NULL);
-
-    LoadSRAM(loadbuffer, savebuffersize, 0);
-
-    gba_save_data_t* saveslots = (gba_save_data_t*)loadbuffer;
-
-    gba_save_data_t* savedata = &saveslots[_g->savegameslot];
-
-    if(savedata->save_present != 1)
-        return;
-
-    _g->gameskill = savedata->gameskill;
-    _g->gameepisode = savedata->gameepisode;
-    _g->gamemap = savedata->gamemap;
-	_g->alwaysRun = savedata->alwaysRun;
-	_g->gamma = savedata->gamma;
-	V_SetPalLump(_g->gamma);
-	
-    G_InitNew (_g->gameskill, _g->gameepisode, _g->gamemap);
-
-    _g->totalleveltimes = savedata->totalleveltimes;
-    memcpy(_g->player.weaponowned, savedata->weaponowned, sizeof(savedata->weaponowned));
-    memcpy(_g->player.ammo, savedata->ammo, sizeof(savedata->ammo));
-    memcpy(_g->player.maxammo, savedata->maxammo, sizeof(savedata->maxammo));
-	
-    //If stored maxammo is more than no backpack ammo, player had a backpack.
-    if(_g->player.maxammo[am_clip] > maxammo[am_clip])
-		_g->player.backpack = true;
-
-    Z_Free(loadbuffer);
-}
+    fclose(savefile);
+    // done 
+    //Z_Free (_g->savebuffer); 
+} 
+ 
 
 //
 // G_SaveGame
 // Called by the menu task.
-// Description is a 24 byte text string
+// Description is a 24 byte text string 
 //
+char savedescription[25];
+void
+G_SaveGame
+( int	slot,
+  const char*	description ) 
+{ 
+    printf("G_SaveGame(%d, %s)\n", slot, description);
+    _g->savegameslot = slot; 
+    _g->gameaction = ga_savegame;
+    strcpy (savedescription, description); 
+    
+} 
 
-void G_SaveGame(int slot, const char *description)
-{
-    _g->savegameslot = slot;
-    G_DoSaveGame(true);
-}
 
-static void G_DoSaveGame(boolean menu)
-{
-    unsigned int savebuffersize = sizeof(gba_save_data_t) * 8;
+void G_DoSaveGame (boolean menu) 
+{ 
+    char	name[100]; 
+    char	name2[VERSIONSIZE]; 
+    char*	description; 
+    int		length; 
+    int		i; 
+    
+    
+	printf("G_DoSaveGame()\n");
+	sprintf (name,"/sd/DOOM%d.dsg",_g->savegameslot); 
+    description = savedescription; 
+    //save_p = _g->savebuffer = Z_Malloc(20000, PU_STATIC, 0); 
+	savefile = fopen(name, "w");
+    printf("name: %s, file_fd: %p\n", name, savefile);
 
-    byte* savebuffer = Z_Malloc(savebuffersize, PU_STATIC, NULL);
+    //memcpy (save_p, description, SAVESTRINGSIZE); 
+    wr(description, SAVESTRINGSIZE);
+    printf("description: %s\n",description);
+    //save_p += SAVESTRINGSIZE; 
+    memset (name2,0,sizeof(name2)); 
+    sprintf (name2,"version %s",VERSION); 
+    
+    //memcpy (save_p, name2, VERSIONSIZE); 
+    //save_p += VERSIONSIZE; 
+    wr(name2, VERSIONSIZE);
+    printf("version: %s\n",name2);
 
-    LoadSRAM(savebuffer, savebuffersize, 0);
+/*	 
+    *save_p++ = _g->gameskill; 
+    *save_p++ = _g->gameepisode; 
+    *save_p++ = _g->gamemap; 
 
-    gba_save_data_t* saveslots = (gba_save_data_t*)savebuffer;
+	*save_p++ = _g->playeringame; 
 
-    gba_save_data_t* savedata = &saveslots[_g->savegameslot];
+    *save_p++ = _g->leveltime>>16; 
+    *save_p++ = _g->leveltime>>8; 
+    *save_p++ = _g->leveltime; 
+*/
+    wb(_g->gameskill); 
+    wb(_g->gameepisode); 
+    wb(_g->gamemap); 
+	wb(_g->playeringame); 
+    wb(_g->leveltime>>16); 
+    wb(_g->leveltime>>8); 
+    wb(_g->leveltime); 
 
-    savedata->save_present = 1;
+    printf("Position in file: %ld\n", ftell(savefile));
+ 	printf("P_ArchivePlayers:\n");
+    P_ArchivePlayers (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+ 	printf("P_ArchiveWorld:\n");
+    P_ArchiveWorld (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+ 	printf("P_ArchiveThinkers:\n");
+    P_ArchiveThinkers (); 
+    printf("Position in file: %ld\n", ftell(savefile));
+ 	printf("P_ArchiveSpecials:\n");
+    P_ArchiveSpecials (); 
 
-    savedata->gameskill = _g->gameskill;
-    savedata->gameepisode = _g->gameepisode;
-    savedata->gamemap = _g->gamemap;
-    savedata->totalleveltimes = _g->totalleveltimes;
-	savedata->alwaysRun = _g->alwaysRun;
-	savedata->gamma = _g->gamma;
+    wb(0x1d);		// consistancy marker 
+	 
+    length = save_p - _g->savebuffer; 
 
-    memcpy(savedata->weaponowned, _g->player.weaponowned, sizeof(savedata->weaponowned));
-    memcpy(savedata->ammo, _g->player.ammo, sizeof(savedata->ammo));
-    memcpy(savedata->maxammo, _g->player.maxammo, sizeof(savedata->maxammo));
+    printf("Check length zero: %d\n",length);
+    printf("Total write to file: %ld\n", ftell(savefile));
+    fclose(savefile);
+    //M_WriteFile (name, savebuffer, length); 
+    _g->gameaction = ga_nothing; 
+    savedescription[0] = 0;		 
+	//Z_Free(_g->savebuffer);
+    //players[consoleplayer].message = GGSAVED; 
 
-    SaveSRAM(savebuffer, savebuffersize, 0);
-
-    Z_Free(savebuffer);
-
-    _g->player.message = GGSAVED;
-
-    G_UpdateSaveGameStrings();
-}
+    // draw the pattern into the back screen
+    //R_FillBackScreen ();	
+} 
+ 
 
 void G_SaveSettings()
 {

@@ -789,7 +789,7 @@ int cnt_secret;
 
 boolean snl_pointeron;
 
-
+char * savebuffer;
 //******************************************************************************
 #endif // GLOBAL_DEFS_H
 

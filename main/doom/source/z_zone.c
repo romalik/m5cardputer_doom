@@ -112,6 +112,7 @@ void Z_Init (void)
 //
 // Z_Free
 //
+#include <esp_debug_helpers.h>
 void Z_Free (void* ptr)
 {
     memblock_t*		block;
@@ -140,6 +141,9 @@ void Z_Free (void* ptr)
     running_count -= block->size;
     printf("Free: %d\n", running_count);
 #endif
+    if(running_count < 0) {
+        esp_backtrace_print(100);
+    }
 
     other = block->prev;
 

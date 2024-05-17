@@ -77,8 +77,8 @@ bool audioStarted = false;
 #define SAMPLERATE		11025	// Hz
 #define SAMPLESIZE		2   	// 16bit
 
-int snd_card = 1;
-int mus_card = 1;
+int snd_card = 0;
+int mus_card = 0;
 int snd_samplerate = 11025;
 
 int channelsOut = 1;
@@ -603,7 +603,7 @@ void I_InitSound(void)
     audioStarted = true;
 
 
-
+/*
     if(music_player->init(snd_samplerate)) {
       printf("music_player->init() success\n");
       mus_card = 1;
@@ -611,7 +611,7 @@ void I_InitSound(void)
       mus_card = 0;
       printf("music_player->init() failed\n");
     }
-    
+  */  
     printf("music_player: %p\n", music_player);
 
 
