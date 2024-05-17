@@ -86,7 +86,7 @@ void check_evts() {
         new_state[KB_TAB]  = 1;
     }
     for (auto& i : __keyboard->keysState().values) {
-        new_state[i] = 1;
+        new_state[static_cast<size_t>(i)] = 1;
         if(i == 's') {
             scale = !scale;
         }
