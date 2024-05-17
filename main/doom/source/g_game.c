@@ -80,49 +80,42 @@
 // controls (have defaults)
 //
 
-#define KB_RIGHT    '/'
-#define KB_LEFT     ','
-#define KB_UP       ';'
-#define KB_DOWN     '.'
-#define KB_ESC      '`'
-#define KB_ENTER    0x01
-#define KB_L        'l'
-#define KB_QUOTE    '\''
-#define KB_CTRL     0x02
-#define KB_A        'a'
-#define KB_TAB      0x03
-#define KB_F        'f'
-#define KB_Z        'z'
-#define KB_EQUAL    '='
-#define KB_MINUS    '-'
 
+#define K_BKSP  0x01
+#define K_TAB   0x02
+#define K_FN    0x03
+#define K_SHIFT 0x04
+#define K_ENT   0x05
+#define K_CTRL  0x06
+#define K_OPT   0x07
+#define K_ALT   0x08
 
-const int     key_right = KB_RIGHT;
-const int     key_left = KB_LEFT;
-const int     key_up = KB_UP;
-const int     key_down = KB_DOWN;
-const int     key_menu_right = KB_RIGHT;                                      // phares 3/7/98
-const int     key_menu_left = KB_LEFT;                                       //     |
-const int     key_menu_up = KB_UP;                                         //     V
-const int     key_menu_down = KB_DOWN;
-const int     key_menu_escape = KB_ESC;                                     //     |
-const int     key_menu_enter = KB_ENTER;                                      // phares 3/7/98
-const int     key_strafeleft = KB_L;
-const int     key_straferight = KB_QUOTE;
+const int     key_right = '\'';
+const int     key_left = 'l';
+const int     key_up = ';';
+const int     key_down = '.';
+const int     key_menu_right = key_right;                                      // phares 3/7/98
+const int     key_menu_left = key_left;                                       //     |
+const int     key_menu_up = key_up;                                         //     V
+const int     key_menu_down = key_down;
+const int     key_menu_escape = '`';                                     //     |
+const int     key_menu_enter = K_ENT;                                      // phares 3/7/98
+const int     key_strafeleft = K_CTRL;
+const int     key_straferight = K_ALT;
 //Match Doom II GBA retail controls ~ Kippykip
-const int     key_fire = KB_CTRL; 
-const int     key_use = KB_Z;
-const int     key_speed = KB_A;
-const int     key_escape = KB_ESC;                           // phares 4/13/98
-const int     key_enter = KB_ENTER;
-const int     key_map_right = KB_RIGHT;
-const int     key_map_left = KB_LEFT;
-const int     key_map_up = KB_UP;
-const int     key_map_down = KB_DOWN;
-const int     key_map = KB_TAB;
-const int     key_map_follow = KB_F;
-const int     key_map_zoomin = KB_EQUAL;
-const int     key_map_zoomout = KB_MINUS;
+const int     key_fire = K_OPT; 
+const int     key_use = K_FN;
+const int     key_speed = K_SHIFT;
+const int     key_escape = '`';                           // phares 4/13/98
+const int     key_enter = K_ENT;
+const int     key_map_right = key_right;
+const int     key_map_left = key_left;
+const int     key_map_up = key_up;
+const int     key_map_down = key_down;
+const int     key_map = K_TAB;
+const int     key_map_follow = 'f';
+const int     key_map_zoomin = '=';
+const int     key_map_zoomout = '-';
                                           // phares
 
 #define MAXPLMOVE   (forwardmove[1])

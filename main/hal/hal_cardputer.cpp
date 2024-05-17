@@ -57,7 +57,6 @@ void HalCardputer::init()
     printf("hal init\n");
 
     _display_init();
-    _keyboard_init();
 
     _button_init();
     _bat_init();
