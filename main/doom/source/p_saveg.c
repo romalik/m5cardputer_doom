@@ -88,6 +88,11 @@ void P_ArchivePlayers (void)
 		
 	}
 
+			mobj_t * mobj = (mobj_t *)_g->player.mo;
+			mobj->state = (state_t *)((char *)mobj->state - (char *)states);
+			wr(mobj, sizeof(*mobj));	    
+			mobj->state = (state_t *)((char *)mobj->state + (size_t)(char *)states);
+
 	/*
     }
 	*/
@@ -130,6 +135,18 @@ void P_UnArchivePlayers (void)
 	/*
     }
 	*/
+	    mobj_t * mobj = Z_Malloc (sizeof(*mobj), PU_LEVEL, NULL);
+	    rr(mobj, sizeof(*mobj));
+
+	    mobj->state = &states[(int)mobj->state];
+	    mobj->target = NULL;
+
+	    P_SetThingPosition (mobj);
+	    //mobj->info = &mobjinfo[mobj->type];
+	    mobj->floorz = mobj->subsector->sector->floorheight;
+	    mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+	    mobj->thinker.function = P_MobjThinker;
+		_g->player.mo = mobj;
 }
 
 
@@ -163,9 +180,7 @@ void P_ArchiveWorld (void)
     // do lines
     for (i=0, li = _g->lines ; i<_g->numlines ; i++,li++)
     {
-	ww(li->flags);
-	ww(li->const_special);
-	ww(li->tag);
+
 	for (j=0 ; j<2 ; j++)
 	{
 	    if (li->sidenum[j] == -1)
@@ -211,25 +226,15 @@ void P_UnArchiveWorld (void)
     // do sectors
     for (i=0, sec = _g->sectors ; i<_g->numsectors ; i++,sec++)
     {
-		trace();
 	rw(&sec->floorheight);
-		trace();
 	sec->floorheight = sec->floorheight << FRACBITS;
-		trace();
 	rw(&sec->ceilingheight);
-		trace();
 	sec->ceilingheight = sec->ceilingheight << FRACBITS;
-		trace();
 	rw(&sec->floorpic);
-		trace();
 	rw(&sec->ceilingpic);
-		trace();
 	rw(&sec->lightlevel);
-		trace();
 	rw(&sec->special);		// needed?
-		trace();
 	rw(&sec->tag);   		// needed?
-		trace();
 	
 	sec->soundtarget = 0;
 	//sec->specialdata = 0;
@@ -238,44 +243,27 @@ void P_UnArchiveWorld (void)
     // do lines
     for (i=0, li = _g->lines ; i<_g->numlines ; i++,li++)
     {
-		trace();
-	rw(&li->flags);
-		trace();
-	rw(&li->const_special);
-		trace();
-	rw(&li->tag); <<<<<<<< crash here
-		trace();
+		printf("read lines %d/%d\n", i, _g->numlines);
 
 	for (j=0 ; j<2 ; j++)
 	{
 	    if (li->sidenum[j] == -1)
 		continue;
 	    si = &_g->sides[li->sidenum[j]];
-		trace();
 	    rw(&si->textureoffset);
-		trace();
 		si->textureoffset = si->textureoffset << FRACBITS;
-		trace();
 	    rw(&si->rowoffset);
-		trace();
 		si->rowoffset = si->rowoffset << FRACBITS;
-		trace();
 		short v;
 		
 		rw(&v);
-		trace();
 		si->toptexture = v;
-		trace();
 	    
 		rw(&v);
-		trace();
 	    si->bottomtexture = v;
-		trace();
 
 		rw(&v);
-		trace();
 	    si->midtexture = v;
-		trace();
 	}
     }
 
@@ -379,6 +367,7 @@ void P_UnArchiveThinkers (void)
 	    mobj->ceilingz = mobj->subsector->sector->ceilingheight;
 	    mobj->thinker.function = P_MobjThinker;
 	    P_AddThinker (&mobj->thinker);
+
 	    break;
 			
 	  default:
