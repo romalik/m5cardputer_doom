@@ -27,5 +27,4 @@ idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=misleading-indentation" APP
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=stringop-truncation" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=format-overflow=" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=parentheses" APPEND)
-
-
+idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=pointer-sign" APPEND)

@@ -611,7 +611,7 @@ void I_InitSound(void)
       mus_card = 0;
       printf("music_player->init() failed\n");
     }
-    
+   
     printf("music_player: %p\n", music_player);
 
 

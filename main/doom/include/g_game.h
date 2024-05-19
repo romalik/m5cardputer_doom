@@ -71,7 +71,7 @@ void G_DoVictory(void);
 void G_BuildTiccmd (ticcmd_t* cmd); // CPhipps - move decl to header
 void G_MakeSpecialEvent(buttoncode_t bc, ...); /* cph - new event stuff */
 
-void G_UpdateSaveGameStrings();
+
 
 void G_LoadSettings();
 void G_SaveSettings();

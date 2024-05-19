@@ -496,9 +496,21 @@ const static menu_t SaveDef =
 // M_ReadSaveStrings
 //  read the strings from the savegame files
 //
+
 void M_ReadSaveStrings(void)
 {
-
+  FILE * fd;
+  for(int i = 0; i<8; i++) {
+    char fname[32];
+    sprintf(fname, "/sd/DOOM%d.dsg", i);
+    fd = fopen(fname, "r");
+    if(!fd) {
+      strcpy(_g->savegamestrings[i], "EMPTY");
+    } else {
+      fread(_g->savegamestrings[i], SAVESTRINGSIZE, 1, fd);
+      fclose(fd);
+    }
+  }
 }
 
 //
@@ -522,9 +534,22 @@ void M_DrawSave(void)
 //
 // M_Responder calls this when user is finished
 //
+char save_descr[10];
 static void M_DoSave(int slot)
 {
-  G_SaveGame (slot,_g->savegamestrings[slot]);
+
+  if(_g->gamemode == commercial)
+  {
+      strcpy(save_descr, "MAP ");
+      itoa(_g->gamemap, &save_descr[4], 10);
+  }
+  else
+  {
+      strcpy(save_descr, "ExMy");
+      save_descr[1] = '0' + _g->gameepisode;
+      save_descr[3] = '0' + _g->gamemap;
+  }
+  G_SaveGame (slot,save_descr);
   M_ClearMenus ();
 }
 
@@ -1280,7 +1305,7 @@ void M_Init(void)
   _g->messageString = NULL;
   _g->messageLastMenuActive = _g->menuactive;
 
-  G_UpdateSaveGameStrings();
+  M_ReadSaveStrings();
 }
 
 //

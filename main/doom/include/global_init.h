@@ -75,7 +75,7 @@ _g->snd_MusicVolume = 8;
 
 _g->st_oldhealth = -1;
 
-
+_g->alwaysRun = 1;
 
 
 
