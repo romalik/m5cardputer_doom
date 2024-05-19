@@ -187,8 +187,7 @@ void P_UnArchiveWorld (void)
     line_t*		li;
     side_t*		si;
     short*		get;
-	
-trace();
+
 
     // do lines
     for (i=0, li = _g->lines ; i<_g->numlines ; i++,li++)
@@ -197,44 +196,40 @@ trace();
 	for (j=0 ; j<2 ; j++)
 	{
 	    if (li->sidenum[j] == -1)
-trace();
+
 	    si = &_g->sides[li->sidenum[j]];
-trace();
+
 
 	    rw(&si->textureoffset);
-trace();
+
 
 		si->textureoffset = si->textureoffset << FRACBITS;
-trace();
+
 
 	    rw(&si->rowoffset);
-trace();
+
 
 		si->rowoffset = si->rowoffset << FRACBITS;
-trace();
 
 		short v;
-trace();
+
 		
 		rw(&v);
-trace();
 
 		si->toptexture = v;
-trace();
 
 	    
 		rw(&v);
-trace();
 
 	    si->bottomtexture = v;
-trace();
+
 
 
 		rw(&v);
-trace();
+
 
 	    si->midtexture = v;
-trace();
+
 
 	}
     }

@@ -940,7 +940,24 @@ void G_DoLoadGame (void)
     savefile = fopen(savename, "r");
     printf("savefile: %p\n", savefile);
     _g->gameaction = ga_nothing; 
-	
+
+    fseek(savefile, 0L, SEEK_END);
+    size_t sz = ftell(savefile);
+    printf("File size: %zu\n", sz);
+    rewind(savefile);
+/*
+    short t = 0;
+    for(size_t i = 0; i<sz; i++) {
+        short b;
+        rw(&b);
+        t = t+b;
+        if(i%100 == 0) {
+            printf("read %d/%d\n",i,sz);
+        }
+    }
+	printf("read done, sum %d\n",t);
+    while(1) {}
+*/
     length = 0;//M_ReadFile (savename, &_g->savebuffer); 
     char dummy[16];
 
@@ -996,6 +1013,11 @@ void G_DoLoadGame (void)
     printf("Total read from file: %ld\n", ftell(savefile));
 
     fclose(savefile);
+
+
+    printf("crash here?\n");
+    printf("player cheats: %d\n", _g->player.cheats);
+    printf("nope\n");
     // done 
     //Z_Free (_g->savebuffer); 
 } 
