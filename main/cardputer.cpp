@@ -310,7 +310,6 @@ extern "C" void app_main(void)
     printf("Init SD\n");
     if(!init_sd() == ESP_OK) {
         printf("SD Init Failed!\n");
-        while(1){}
     }
     delay(500);
 
@@ -326,26 +325,23 @@ extern "C" void app_main(void)
     
     doom_canvas->createSprite(240,160);
     
-    doom_canvas->fillScreen(0xffffffff);
-    doom_canvas->pushSprite(0,0);
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
-    delay(500);
 
 
 
+/*
     printf("List root:\n");
 
     listdir("/sd", 0);
+*/
 
-    doom_canvas->fillScreen(0x4488aacc);
-    doom_canvas->pushSprite(0,0);
-
+/*
     printf("Write file\n");
     FILE * f = fopen("/sd/testfile", "w");
     fwrite("test text", 10, 1, f);
     fclose(f);
     listdir("/sd", 0);
-
+*/
     printf("Launch DOOM\n");
     doom_main(0,0);
 
