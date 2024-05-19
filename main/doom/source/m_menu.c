@@ -502,7 +502,7 @@ void M_ReadSaveStrings(void)
   FILE * fd;
   for(int i = 0; i<8; i++) {
     char fname[32];
-    sprintf(fname, "/sd/DOOM%d.dsg", i);
+    sprintf(fname, "/sd/doom/DOOM%d.dsg", i);
     fd = fopen(fname, "r");
     if(!fd) {
       strcpy(_g->savegamestrings[i], "EMPTY");

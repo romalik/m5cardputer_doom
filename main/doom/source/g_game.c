@@ -900,7 +900,7 @@ char	savename[24];
 void G_LoadGame (int slot, boolean is_cmd) 
 { 
     printf("G_LoadGame(%d)\n", slot);
-    sprintf (savename,"/sd/DOOM%d.dsg", slot);
+    sprintf (savename,"/sd/doom/DOOM%d.dsg", slot);
     _g->gameaction = ga_loadgame; 
 } 
  
@@ -1052,7 +1052,7 @@ void G_DoSaveGame (boolean menu)
     
     
 	printf("G_DoSaveGame()\n");
-	sprintf (name,"/sd/DOOM%d.dsg",_g->savegameslot); 
+	sprintf (name,"/sd/doom/DOOM%d.dsg",_g->savegameslot); 
     description = savedescription; 
     //save_p = _g->savebuffer = Z_Malloc(20000, PU_STATIC, 0); 
 	savefile = fopen(name, "w");

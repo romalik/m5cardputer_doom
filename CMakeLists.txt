@@ -12,4 +12,4 @@ cmake_minimum_required(VERSION 3.16)
 include_directories(./main/apps/utils/usb_keyboard_wrap/hid_device)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(cardputer)
+project(cardputer_doom)

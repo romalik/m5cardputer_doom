@@ -304,6 +304,9 @@ void listdir(const char *name, int indent)
     closedir(dir);
 }
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "hal/display/hal_display.hpp"
 extern "C" void app_main(void)
 {
@@ -312,7 +315,7 @@ extern "C" void app_main(void)
         printf("SD Init Failed!\n");
     }
     delay(500);
-
+    mkdir("/sd/doom", 0775);
     kb_init(kb_output_list, kb_input_list);
 
     printf("initCanvas\n");

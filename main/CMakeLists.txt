@@ -12,7 +12,7 @@ file(GLOB_RECURSE HAL_SRCS
 
 
 
-idf_component_register(SRCS "cardputer.cpp" ${APPS_SRCS} ${HAL_SRCS}
+idf_component_register(SRCS "cardputer_doom.cpp" ${APPS_SRCS} ${HAL_SRCS}
                     INCLUDE_DIRS "." "./hal" "./doom/include")
 
 
