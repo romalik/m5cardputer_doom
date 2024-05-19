@@ -69,7 +69,6 @@ memzone_t*	mainzone;
 // Z_Init
 //
 unsigned int _z_heap_size;
-char * zone_start;
 void Z_Init (void)
 {
     memblock_t*	block;
@@ -106,7 +105,6 @@ void Z_Init (void)
 
     block->size = heapSize - sizeof(memzone_t);
     _z_heap_size = heapSize;
-    zone_start = (char*)mainzone;
 
 }
 

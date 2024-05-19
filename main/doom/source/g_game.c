@@ -930,9 +930,6 @@ void rseek(unsigned int sz) {
     fseek(savefile, sz, SEEK_CUR);
 }
 extern char * save_p;
-extern char * zone_start;
-extern unsigned int _z_heap_size;
-
 void G_DoLoadGame (void) 
 { 
     int		length; 
@@ -943,32 +940,21 @@ void G_DoLoadGame (void)
     savefile = fopen(savename, "r");
     printf("savefile: %p\n", savefile);
     _g->gameaction = ga_nothing; 
-
-    char dummy[16];
-    rr(dummy,SAVESTRINGSIZE);
-    printf("description: %s\n",dummy);
-
-    rr(dummy, VERSIONSIZE);
-    printf("version: %s\n",dummy);
-
-
-    char skill, episode, map;
-    rb(&skill);
-    rb(&episode);
-    rb(&map);
-
-    G_InitNew (skill, episode, map); 
-
-    fread(&_g, sizeof(_g), 1, savefile);
-    fread(zone_start, _z_heap_size, 1, savefile);
-    printf("Total read from file: %ld\n", ftell(savefile));
-    fclose(savefile);
-    I_SetPallete_e32(_g->current_pallete);
-	/*
+	
     length = 0;//M_ReadFile (savename, &_g->savebuffer); 
+    char dummy[16];
 
     //save_p = _g->savebuffer + SAVESTRINGSIZE;
     //rseek(SAVESTRINGSIZE);    
+    rr(dummy,SAVESTRINGSIZE);
+    // skip the description field 
+    printf("description: %s\n",dummy);
+
+    //save_p += VERSIONSIZE; 
+	//rseek(VERSIONSIZE);
+    rr(dummy, VERSIONSIZE);
+
+    printf("version: %s\n",dummy);
 
     rb(&_g->gameskill);
     rb(&_g->gameepisode);
@@ -1010,7 +996,6 @@ void G_DoLoadGame (void)
     fclose(savefile);
     // done 
     //Z_Free (_g->savebuffer); 
-    */
 } 
  
 
@@ -1048,23 +1033,6 @@ void G_DoSaveGame (boolean menu)
     //save_p = _g->savebuffer = Z_Malloc(20000, PU_STATIC, 0); 
 	savefile = fopen(name, "w");
     printf("name: %s, file_fd: %p\n", name, savefile);
-    
-    wr(description, SAVESTRINGSIZE);
-    printf("description: %s\n",description);
-
-    memset (name2,0,sizeof(name2)); 
-    sprintf (name2,"version %s",VERSION); 
-    wr(name2, VERSIONSIZE);
-    printf("version: %s\n",name2);
-
-    wb(_g->gameskill);
-    wb(_g->gameepisode);
-    wb(_g->gamemap);
-
-    fwrite(&_g, sizeof(_g), 1, savefile);
-    fwrite(zone_start, _z_heap_size, 1, savefile);
-
-/*
 
     //memcpy (save_p, description, SAVESTRINGSIZE); 
     wr(description, SAVESTRINGSIZE);
@@ -1078,7 +1046,17 @@ void G_DoSaveGame (boolean menu)
     wr(name2, VERSIONSIZE);
     printf("version: %s\n",name2);
 
+/*	 
+    *save_p++ = _g->gameskill; 
+    *save_p++ = _g->gameepisode; 
+    *save_p++ = _g->gamemap; 
 
+	*save_p++ = _g->playeringame; 
+
+    *save_p++ = _g->leveltime>>16; 
+    *save_p++ = _g->leveltime>>8; 
+    *save_p++ = _g->leveltime; 
+*/
     wb(_g->gameskill); 
     wb(_g->gameepisode); 
     wb(_g->gamemap); 
@@ -1105,17 +1083,11 @@ void G_DoSaveGame (boolean menu)
     length = save_p - _g->savebuffer; 
 
     printf("Check length zero: %d\n",length);
-
-*/
     printf("Total write to file: %ld\n", ftell(savefile));
     fclose(savefile);
     //M_WriteFile (name, savebuffer, length); 
-
-
     _g->gameaction = ga_nothing; 
-    		 
-
-
+    savedescription[0] = 0;		 
 	//Z_Free(_g->savebuffer);
     //players[consoleplayer].message = GGSAVED; 
 
