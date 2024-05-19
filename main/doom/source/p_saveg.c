@@ -114,17 +114,13 @@ void P_UnArchivePlayers (void)
 	*/
 	rr(&_g->player, sizeof(player_t));
 	
-	// will be set when unarc thinker
-	_g->player.mo = NULL;	
-	_g->player.message = NULL;
-	_g->player.attacker = NULL;
 
 	for (j=0 ; j<NUMPSPRITES ; j++)
 	{
 	    if (_g->player. psprites[j].state)
 	    {
 			_g->player. psprites[j].state 
-				= &states[ (int)_g->player.psprites[j].state ];
+				= (state_t *)((char *)states + (size_t)_g->player.psprites[j].state);
 	    }
 	}
 	/*
@@ -147,25 +143,11 @@ void P_ArchiveWorld (void)
 	
     //put = (short *)save_p;
     
-    // do sectors
-    for (i=0, sec = _g->sectors ; i<_g->numsectors ; i++,sec++)
-    {
-	ww(sec->floorheight >> FRACBITS);
-	ww(sec->ceilingheight >> FRACBITS);
-	ww(sec->floorpic);
-	ww(sec->ceilingpic);
-	ww(sec->lightlevel);
-	ww(sec->special);		// needed?
-	ww(sec->tag);		// needed?
-    }
 
-    
     // do lines
     for (i=0, li = _g->lines ; i<_g->numlines ; i++,li++)
     {
-	ww(li->flags);
-	ww(li->const_special);
-	ww(li->tag);
+
 	for (j=0 ; j<2 ; j++)
 	{
 	    if (li->sidenum[j] == -1)
@@ -206,76 +188,54 @@ void P_UnArchiveWorld (void)
     side_t*		si;
     short*		get;
 	
-    get = (short *)save_p;
-    
-    // do sectors
-    for (i=0, sec = _g->sectors ; i<_g->numsectors ; i++,sec++)
-    {
-		trace();
-	rw(&sec->floorheight);
-		trace();
-	sec->floorheight = sec->floorheight << FRACBITS;
-		trace();
-	rw(&sec->ceilingheight);
-		trace();
-	sec->ceilingheight = sec->ceilingheight << FRACBITS;
-		trace();
-	rw(&sec->floorpic);
-		trace();
-	rw(&sec->ceilingpic);
-		trace();
-	rw(&sec->lightlevel);
-		trace();
-	rw(&sec->special);		// needed?
-		trace();
-	rw(&sec->tag);   		// needed?
-		trace();
-	
-	sec->soundtarget = 0;
-	//sec->specialdata = 0;
-    }
-    
+trace();
+
     // do lines
     for (i=0, li = _g->lines ; i<_g->numlines ; i++,li++)
     {
-		trace();
-	rw(&li->flags);
-		trace();
-	rw(&li->const_special);
-		trace();
-	rw(&li->tag); <<<<<<<< crash here
-		trace();
 
 	for (j=0 ; j<2 ; j++)
 	{
 	    if (li->sidenum[j] == -1)
-		continue;
+trace();
 	    si = &_g->sides[li->sidenum[j]];
-		trace();
+trace();
+
 	    rw(&si->textureoffset);
-		trace();
+trace();
+
 		si->textureoffset = si->textureoffset << FRACBITS;
-		trace();
+trace();
+
 	    rw(&si->rowoffset);
-		trace();
+trace();
+
 		si->rowoffset = si->rowoffset << FRACBITS;
-		trace();
+trace();
+
 		short v;
+trace();
 		
 		rw(&v);
-		trace();
+trace();
+
 		si->toptexture = v;
-		trace();
+trace();
+
 	    
 		rw(&v);
-		trace();
+trace();
+
 	    si->bottomtexture = v;
-		trace();
+trace();
+
 
 		rw(&v);
-		trace();
+trace();
+
 	    si->midtexture = v;
-		trace();
+trace();
+
 	}
     }
 
@@ -315,7 +275,6 @@ void P_ArchiveThinkers (void)
 		{
 			char b = tc_mobj;
 			wb(b);
-
 			mobj = (mobj_t *)th;
 			mobj->state = (state_t *)((char *)mobj->state - (char *)states);
 			wr(mobj, sizeof(*mobj));	    
@@ -367,11 +326,11 @@ void P_UnArchiveThinkers (void)
 			
 	  case tc_mobj:
 
+
 	    mobj = Z_Malloc (sizeof(*mobj), PU_LEVEL, NULL);
 	    rr(mobj, sizeof(*mobj));
+	    mobj->state = (state_t *)((char*)states + (size_t)mobj->state);
 
-	    mobj->state = &states[(int)mobj->state];
-	    mobj->target = NULL;
 
 	    P_SetThingPosition (mobj);
 	    //mobj->info = &mobjinfo[mobj->type];
@@ -562,7 +521,7 @@ void P_UnArchiveSpecials (void)
 
 	    ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVEL, NULL);
 		rr(ceiling, sizeof(*ceiling));
-	    ceiling->sector = &_g->sectors[(int)ceiling->sector];
+	    ceiling->sector = (sector_t *)((char*)_g->sectors + (size_t)ceiling->sector);
 	    //ceiling->sector->specialdata = ceiling;
 
 	    if (ceiling->thinker.function)
@@ -576,7 +535,7 @@ void P_UnArchiveSpecials (void)
 
 	    door = Z_Malloc (sizeof(*door), PU_LEVEL, NULL);
 		rr(door, sizeof(*door));
-	    door->sector = &_g->sectors[(int)door->sector];
+	    door->sector = (sector_t *)((char*)_g->sectors + (size_t)door->sector);
 	    //door->sector->specialdata = door;
 	    door->thinker.function = T_VerticalDoor;
 	    P_AddThinker (&door->thinker);
@@ -586,7 +545,7 @@ void P_UnArchiveSpecials (void)
 
 	    floor = Z_Malloc (sizeof(*floor), PU_LEVEL, NULL);
 	    rr(floor, sizeof(*floor));
-	    floor->sector = &_g->sectors[(int)floor->sector];
+	    floor->sector = (sector_t *)((char*)_g->sectors + (size_t)floor->sector);
 	    //floor->sector->specialdata = floor;
 	    floor->thinker.function = T_MoveFloor;
 	    P_AddThinker (&floor->thinker);
@@ -595,7 +554,7 @@ void P_UnArchiveSpecials (void)
 	  case tc_plat:
 	    plat = Z_Malloc (sizeof(*plat), PU_LEVEL, NULL);
 	    rr(plat, sizeof(*plat));
-	    plat->sector = &_g->sectors[(int)plat->sector];
+	    plat->sector = (sector_t *)((char*)_g->sectors + (size_t)plat->sector);
 	    //plat->sector->specialdata = plat;
 
 	    if (plat->thinker.function)
@@ -608,7 +567,7 @@ void P_UnArchiveSpecials (void)
 	  case tc_flash:
 	    flash = Z_Malloc (sizeof(*flash), PU_LEVEL, NULL);
 	    rr(flash, sizeof(*flash));
-	    flash->sector = &_g->sectors[(int)flash->sector];
+	    flash->sector = (sector_t *)((char*)_g->sectors + (size_t)flash->sector);
 	    flash->thinker.function = T_LightFlash;
 	    P_AddThinker (&flash->thinker);
 	    break;
@@ -616,7 +575,7 @@ void P_UnArchiveSpecials (void)
 	  case tc_strobe:
 	    strobe = Z_Malloc (sizeof(*strobe), PU_LEVEL, NULL);
 	    rr(strobe, sizeof(*strobe));
-	    strobe->sector = &_g->sectors[(int)strobe->sector];
+	    strobe->sector = (sector_t *)((char*)_g->sectors + (size_t)strobe->sector);
 	    strobe->thinker.function = T_StrobeFlash;
 	    P_AddThinker (&strobe->thinker);
 	    break;
@@ -624,7 +583,7 @@ void P_UnArchiveSpecials (void)
 	  case tc_glow:
 	    glow = Z_Malloc (sizeof(*glow), PU_LEVEL, NULL);
 	    rr(glow, sizeof(*glow));
-	    glow->sector = &_g->sectors[(int)glow->sector];
+	    glow->sector = (sector_t *)((char*)_g->sectors + (size_t)glow->sector);
 	    glow->thinker.function = T_Glow;
 	    P_AddThinker (&glow->thinker);
 	    break;
@@ -640,3 +599,46 @@ void P_UnArchiveSpecials (void)
 
 }
 
+char * find_thinker_by_prev_pointer(char * ptr) {
+	if(!ptr) return NULL;
+
+    thinker_t *th;
+  	for (th = thinkercap.next; th != &thinkercap; )
+    {
+      thinker_t *next = th->next;
+      if (th->self_before_load == ptr) {
+		printf("Thinker %p found!\n", ptr);
+		return th;		
+	  }
+      th = next;
+    }
+	printf("EEEE Thinker %p not found!\n", ptr);
+	return NULL;
+
+}
+
+void P_UnArchiveThinkerPointers (void) {
+	
+	byte		tclass;
+    thinker_t*		currentthinker;
+    thinker_t*		next;
+    mobj_t*		mobj;
+    thinker_t *th;
+  	for (th = thinkercap.next; th != &thinkercap; )
+    {
+      thinker_t *next = th->next;
+      if (th->function == P_MobjThinker) {
+        ((mobj_t *) th)->target = (mobj_t *)find_thinker_by_prev_pointer((char *)((mobj_t *) th)->target);
+        ((mobj_t *) th)->tracer = (mobj_t *)find_thinker_by_prev_pointer((char *)((mobj_t *) th)->tracer);
+        ((mobj_t *) th)->lastenemy = (mobj_t *)find_thinker_by_prev_pointer((char *)((mobj_t *) th)->lastenemy);
+		
+	  } else {
+        //Z_Free (th);
+	  }
+      th = next;
+    }
+
+	_g->player.mo = (mobj_t *)find_thinker_by_prev_pointer((char *)_g->player.mo);
+	_g->player.attacker = (mobj_t *)find_thinker_by_prev_pointer((char *)_g->player.attacker);
+	
+}

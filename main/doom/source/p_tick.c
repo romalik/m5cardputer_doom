@@ -70,6 +70,8 @@ void P_AddThinker(thinker_t* thinker)
   thinker->next = &thinkercap;
   thinker->prev = thinkercap.prev;
   thinkercap.prev = thinker;
+  thinker->self_before_load = thinker->self;
+  thinker->self = thinker;
 }
 
 //

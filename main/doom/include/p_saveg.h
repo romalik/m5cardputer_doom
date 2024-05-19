@@ -39,7 +39,7 @@ void P_ArchiveThinkers (void);
 void P_UnArchiveThinkers (void);
 void P_ArchiveSpecials (void);
 void P_UnArchiveSpecials (void);
-
+void P_UnArchiveThinkerPointers (void); 
 extern byte*		save_p; 
 
 

@@ -321,6 +321,7 @@ typedef struct mobj_s
     struct msecnode_s* touching_sectorlist;                 // phares 3/14/98
 
     // SEE WARNING ABOVE ABOUT POINTER FIELDS!!!
+
 } mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98

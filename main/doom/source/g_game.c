@@ -975,14 +975,16 @@ void G_DoLoadGame (void)
     printf("P_UnArchivePlayers:\n");
     P_UnArchivePlayers (); 
     printf("Position in file: %ld\n", ftell(savefile));
-    printf("P_UnArchiveWorld:\n");
-    P_UnArchiveWorld (); 
+    //printf("P_UnArchiveWorld:\n");
+    //P_UnArchiveWorld (); 
     printf("Position in file: %ld\n", ftell(savefile));
     printf("P_UnArchiveThinkers:\n");
     P_UnArchiveThinkers (); 
     printf("Position in file: %ld\n", ftell(savefile));
     printf("P_UnArchiveSpecials:\n");
     P_UnArchiveSpecials (); 
+    printf("P_UnArchiveThinkerPointers:\n");
+    P_UnArchiveThinkerPointers (); 
  
     char s;
 
@@ -1069,8 +1071,8 @@ void G_DoSaveGame (boolean menu)
  	printf("P_ArchivePlayers:\n");
     P_ArchivePlayers (); 
     printf("Position in file: %ld\n", ftell(savefile));
- 	printf("P_ArchiveWorld:\n");
-    P_ArchiveWorld (); 
+ 	//printf("P_ArchiveWorld:\n");
+    //P_ArchiveWorld (); 
     printf("Position in file: %ld\n", ftell(savefile));
  	printf("P_ArchiveThinkers:\n");
     P_ArchiveThinkers (); 
