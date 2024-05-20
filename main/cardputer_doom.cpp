@@ -308,7 +308,9 @@ void listdir(const char *name, int indent)
 #include <sys/types.h>
 
 #include "hal/display/hal_display.hpp"
-extern "C" void app_main(void)
+extern const unsigned char doom_iwad[];
+
+extern "C" void app_main_(void)
 {
     printf("Init SD\n");
     if(!init_sd() == ESP_OK) {
@@ -348,4 +350,157 @@ extern "C" void app_main(void)
     printf("Launch DOOM\n");
     doom_main(0,0);
 
+}
+
+/*
+extern "C" void __asan_load4_noabort(void * ptr) {
+
+}
+*/
+extern "C" void my_putc(char c) {
+    printf("%c", c);
+}
+
+
+#define MAX_MMAP_FILE_SIZE         16*1024*1024UL
+// 4 Kb
+#define MMAP_PAGE_CHUNK_SHIFT      12
+#define MMAP_PAGE_SIZE             (1UL<<(MMAP_PAGE_CHUNK_SHIFT))
+#define MMAP_PAGE_POSITION_MASK    (MMAP_PAGE_SIZE-1)
+
+#define MMAP_ARENA_N_PAGES 3
+
+typedef struct mmap_page {
+    char data[MMAP_PAGE_SIZE];
+    char data_end;
+    char file_id;
+    unsigned int chunk_idx; //merge file id and chunk idx
+} mmap_page_t;
+
+
+mmap_page_t  mmap_arena[MMAP_ARENA_N_PAGES];
+
+FILE * mmaped_files[16] = {NULL};
+
+extern "C" void my_mmap_init() {
+    memset(mmap_arena, 0, sizeof(mmap_page_t) * MMAP_ARENA_N_PAGES);
+    for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
+        mmap_arena[i].file_id = -1;
+    }
+}
+
+extern "C" char * my_mmap(FILE * fd, size_t offset, size_t size) {
+    char * retval = NULL;
+    printf("my_mmap(%p, %zu, %zu)\n", fd, offset, size);
+    for(int i = 0; i<16; i++) {
+        if(mmaped_files[i] == NULL) {
+            mmaped_files[i] = fd;
+            retval = (char *)((0xf0 | (i&0x0f)) << (8*3));
+            break;
+        }
+    }
+    printf("my_mmap() -> %p\n", retval);
+    return retval;
+}
+
+extern "C" void my_unmmap(FILE * fd) {
+    for(int i = 0; i<16; i++) {
+        if(mmaped_files[i] == fd) {
+            mmaped_files[i] = NULL;
+            return;
+        }
+    }
+}
+
+extern "C" mmap_page_t * get_mmap_page_for_id_and_offset(int id, unsigned int chunk_idx) {
+    for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
+        if(mmap_arena[i].file_id == id && mmap_arena[i].chunk_idx == chunk_idx) {
+            return &mmap_arena[i];
+        }
+    }
+    return NULL;
+}
+
+int __p_idx = 0;
+extern "C" unsigned int get_page_idx_to_swap_out() {
+    unsigned int r = __p_idx;
+    __p_idx++;
+    if(__p_idx == MMAP_ARENA_N_PAGES) __p_idx = 0;
+
+    return r;
+}
+
+void swap_in_page(int page_idx, FILE * fd, unsigned int chunk_idx) {
+
+}
+
+extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
+    int file_id = (((unsigned int)ptr & 0x0f000000) >> (8*3));
+    unsigned int offset = (unsigned int)ptr & 0x00ffffff;
+    unsigned int chunk_idx = offset >> MMAP_PAGE_CHUNK_SHIFT;
+
+    mmap_page_t * page = get_mmap_page_for_id_and_offset(file_id, chunk_idx);
+    if(page == NULL) {
+        int p_idx = get_page_idx_to_swap_out();
+        swap_in_page(p_idx, mmaped_files[file_id], chunk_idx);
+        page = &mmap_arena[p_idx];
+    }
+    return (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK);
+}
+
+
+extern "C" void __asan_load1_noabort(void * ptr) {
+    unsigned int frame;
+    //printf("hook: %p\n", ptr);
+    if(((unsigned int)ptr & 0xf0000000) == 0xf0000000) {
+        printf("Trap! %p\n", ptr);
+        for(int i = -4; i<0; i++) {
+            unsigned int * p = (unsigned int*)((unsigned int)(&(frame)) + i*4);
+            printf("stack%+02d : 0x%08X\n", i, *p);
+            if((unsigned int)*p == (unsigned int)ptr) {
+                printf("Gotcha! Replace!\n");
+                *p = get_ptr_to_buffer(ptr);
+                return;
+            }
+        }
+    }
+}
+
+extern "C" char mmap_test(char * ptr);
+
+char test_string[] = "[[this is normal memory]]\n";
+
+
+extern "C" void app_main() {
+    my_mmap_init();
+
+    printf("Init SD\n");
+    if(!init_sd() == ESP_OK) {
+        printf("SD Init Failed!\n");
+    }
+    delay(500);
+
+    FILE * test_file = fopen("/sd/big_file", "w");
+    for(int i = 0; i<10000; i++) {
+        char line[128];
+        sprintf(line, "this is line #%d\n", i);
+        fwrite(line,strlen(line),1,test_file);
+    }
+    printf("File size: %ld\n", ftell(test_file));
+    fclose(test_file);
+
+    listdir("/sd", 0);
+
+
+    FILE * file = fopen("/sd/big_file", "r");
+    //char * mmaped_file = my_mmap(file, 0, 1000);
+
+    printf("call mmap_test with ptr %p\n", test_string);
+    mmap_test(test_string);
+
+/*
+    printf("call mmap_test with ptr %p\n", mmaped_file);
+    mmap_test(mmaped_file);
+*/
+    while(1) {}
 }

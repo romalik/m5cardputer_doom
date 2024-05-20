@@ -13,3 +13,4 @@ include_directories(./main/apps/utils/usb_keyboard_wrap/hid_device)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(cardputer_doom)
+#target_link_libraries(${project_elf} PRIVATE "-Wl,--wrap=esp_panic_handler") 
