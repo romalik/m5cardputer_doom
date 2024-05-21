@@ -77,8 +77,8 @@ bool audioStarted = false;
 #define SAMPLERATE		11025	// Hz
 #define SAMPLESIZE		2   	// 16bit
 
-int snd_card = 1;
-int mus_card = 1;
+int snd_card = 0;
+int mus_card = 0;
 int snd_samplerate = 11025;
 
 int channelsOut = 1;
@@ -519,7 +519,7 @@ void IRAM_ATTR updateTask(void *arg)
 void I_InitSound(void)
 {
 
-
+  if(!mus_card) return;
 
 
   mixbuffer = malloc(MIXBUFFERSIZE*sizeof(unsigned char));
@@ -602,7 +602,7 @@ void I_InitSound(void)
 
     audioStarted = true;
 
-
+    
 
     if(music_player->init(snd_samplerate)) {
       printf("music_player->init() success\n");

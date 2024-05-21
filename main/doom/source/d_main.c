@@ -490,6 +490,18 @@ static void CheckIWAD2(const unsigned char* iwad_data, const unsigned int iwad_l
 
     int ud=0,rg=0,sw=0,cm=0,sc=0;
 
+    printf("Try read header: ");
+/*
+    for(int i = 0; i<4; i++) {
+        putchar(header->identification[i]);
+    }
+*/
+    for(int i = 0; i<4; i++) {
+        putchar(header->identification[i]);
+    }
+
+    printf("\nheader->identification = %p\n", header->identification);
+    while(1) {}
     if(!strncmp(header->identification, "IWAD", 4))
     {
         size_t length = header->numlumps;

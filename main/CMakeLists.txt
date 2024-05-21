@@ -1,6 +1,6 @@
 
 
-file(GLOB_RECURSE APPS_SRCS
+file(GLOB_RECURSE DOOM_SRCS
     ./doom/*.c
     ./doom/*.cpp
 )
@@ -10,9 +10,9 @@ file(GLOB_RECURSE HAL_SRCS
     ./hal/*.cpp
 )
 
-list(APPEND APPS_SRCS "mmap_test.c")
+list(APPEND DOOM_SRCS "mmap_test.c")
 
-idf_component_register(SRCS "cardputer_doom.cpp" ${APPS_SRCS} ${HAL_SRCS}
+idf_component_register(SRCS "cardputer_doom.cpp" ${DOOM_SRCS} ${HAL_SRCS}
                     INCLUDE_DIRS "." "./hal" "./doom/include")
 
 
@@ -34,5 +34,6 @@ idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=pointer-sign" APPEND)
 
 #idf_build_set_property(C_COMPILE_OPTIONS "-fsanitize=kernel-address" APPEND)
 
-set_source_files_properties(mmap_test.c PROPERTIES COMPILE_FLAGS -fsanitize=kernel-address)
+set_source_files_properties(${DOOM_SRCS} PROPERTIES COMPILE_FLAGS -fsanitize=kernel-address)
+
 #set_source_files_properties(mmap_test.c PROPERTIES COMPILE_FLAGS -fsanitize-recover=address)
