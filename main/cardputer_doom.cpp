@@ -330,7 +330,7 @@ extern "C" void my_putc(char c) {
 
 typedef struct mmap_page {
     char data[MMAP_PAGE_SIZE];
-    unsigned int next_ptr;
+    //unsigned int next_ptr;
     char file_id;
     unsigned int chunk_idx; //merge file id and chunk idx
 } mmap_page_t;
@@ -372,10 +372,10 @@ extern "C" void my_unmmap(FILE * fd) {
 }
 
 extern "C" mmap_page_t * get_mmap_page_for_id_and_offset(int id, unsigned int chunk_idx) {
-    printf("get_mmap_page_for_id_and_offset(%d, %d)\n", id, chunk_idx);
+    //printf("get_mmap_page_for_id_and_offset(%d, %d)\n", id, chunk_idx);
     for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
         if(mmap_arena[i].file_id == id && mmap_arena[i].chunk_idx == chunk_idx) {
-            printf("get_mmap_page_for_id_and_offset() -> %p\n", &mmap_arena[i]);
+            //printf("get_mmap_page_for_id_and_offset() -> %p\n", &mmap_arena[i]);
             return &mmap_arena[i];
         }
     }
@@ -392,7 +392,7 @@ extern "C" unsigned int get_page_idx_to_swap_out() {
 }
 
 extern "C" void swap_in_page(int page_idx, int file_id, unsigned int chunk_idx, unsigned int offset) {
-    printf("swap_in_page(%d, %d, %d, %d)\n", page_idx, file_id, chunk_idx, offset);
+    printf("\n\n---\nswap_in_page(%d, %d, %d, %d)\n---\n", page_idx, file_id, chunk_idx, offset);
     fseek(mmaped_files[file_id], offset, SEEK_SET);
     size_t n_read = fread(mmap_arena[page_idx].data, 1, MMAP_PAGE_SIZE, mmaped_files[file_id]);
     if(n_read < MMAP_PAGE_SIZE) {
@@ -402,8 +402,8 @@ extern "C" void swap_in_page(int page_idx, int file_id, unsigned int chunk_idx, 
     }
     mmap_arena[page_idx].chunk_idx = chunk_idx;
     mmap_arena[page_idx].file_id = file_id;
-    mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
-    printf("swap_in_page next_ptr 0x%08x\n", mmap_arena[page_idx].next_ptr);
+    //mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
+    //printf("swap_in_page next_ptr 0x%08x\n", mmap_arena[page_idx].next_ptr);
 }
 
 extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
@@ -411,31 +411,35 @@ extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
     unsigned int offset = (unsigned int)ptr & 0x00ffffff;
     unsigned int chunk_idx = offset >> MMAP_PAGE_CHUNK_SHIFT;
 
-    printf("get_ptr_to_buffer(%p)\n", ptr);
+    //printf("get_ptr_to_buffer(%p)\n", ptr);
 
     mmap_page_t * page = get_mmap_page_for_id_and_offset(file_id, chunk_idx);
 
     if(page == NULL) {
         int p_idx = get_page_idx_to_swap_out();
-        printf("get_ptr_to_buffer() swapout %d\n", p_idx);
+        //printf("get_ptr_to_buffer() swapout %d\n", p_idx);
         swap_in_page(p_idx, file_id, chunk_idx, offset);
         page = &mmap_arena[p_idx];
     }
-    printf("get_ptr_to_buffer() -> %lu\n", (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK));
+    //printf("get_ptr_to_buffer() -> %lu\n", (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK));
     return (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK);
 }
 
-extern "C" unsigned int check_mmap_page_bound(void * ptr) {
-    for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
-        if(ptr == &mmap_arena[i].next_ptr) {
-            return mmap_arena[i].next_ptr;
-        }
+
+
+
+extern "C" void * __remap_ptr(void * ptr) {
+    if(((unsigned int)ptr & 0xf0000000) == 0xf0000000) {
+        unsigned int val = get_ptr_to_buffer(ptr);
+        //printf("\n---\nTrap! %p replace with 0x%08X\n", ptr, val);
+        return (void*)val;            
+    } else {
+        //printf("\n---\nNo trap! %p\n", ptr);
+        return ptr;
     }
-    return NULL;
 }
 
-char dstr[11] = "0123456789";
-
+/*
 static inline void do_stack_sift(void * ptr) {
    unsigned int frame;
     void * next_chunk_ptr = NULL;
@@ -462,7 +466,6 @@ static inline void do_stack_sift(void * ptr) {
         }
     }
 }
-
 extern "C" void __asan_handle_no_return() {
 }
 
@@ -493,7 +496,7 @@ extern "C" void __asan_load2_noabort(void * ptr) {
 extern "C" void __asan_load1_noabort(void * ptr) {
     do_stack_sift(ptr);
 }
-
+*/
 extern "C" char mmap_test(char * ptr);
 
 char test_string[] = "[[this is normal memory]]\n";
@@ -582,13 +585,16 @@ extern "C" void app_main(void)
         printf("SD Init Failed!\n");
     }
     delay(500);
+    printf("List root:\n");
+    listdir("/sd", 0);
     my_mmap_init();
-    FILE * doom_wad_file = fopen("/sd/gdoom1.wad", "r");
-    char * m = my_mmap(doom_wad_file);
-    //printf("call mmap_test with ptr %p\n", mmaped_file);
-    mmap_test((char*)0xe0000000);
-    printf("\n");
-    printf("halt\n");
+    FILE * file = fopen("/sd/big_file", "r");
+    char * mmaped_file = my_mmap(file);
+
+    printf("call mmap_test with ptr %p\n", test_string);
+    mmap_test(test_string);
+    printf("call mmap_test with ptr %p\n", mmaped_file);
+    mmap_test(mmaped_file);
     while(1);
 }
 */

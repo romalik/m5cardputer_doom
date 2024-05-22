@@ -29,11 +29,15 @@ idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=format-overflow=" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=parentheses" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=pointer-sign" APPEND)
 
+
+#set_source_files_properties(${DOOM_SRCS} PROPERTIES COMPILE_FLAGS -fplugin=./wrap_memaccess.so)
+set_source_files_properties(${DOOM_SRCS} PROPERTIES COMPILE_FLAGS "-fplugin=${CMAKE_CURRENT_LIST_DIR}/../gcc_plugin_wrap_mem_access/wrap_memaccess.so")
+
+
 #idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=esp_panic_handler" APPEND)
 #idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=spi_flash_check_and_flush_cache" APPEND)
 
 #idf_build_set_property(C_COMPILE_OPTIONS "-fsanitize=kernel-address" APPEND)
 
-set_source_files_properties(${DOOM_SRCS} PROPERTIES COMPILE_FLAGS -fsanitize=kernel-address)
 
 #set_source_files_properties(mmap_test.c PROPERTIES COMPILE_FLAGS -fsanitize-recover=address)

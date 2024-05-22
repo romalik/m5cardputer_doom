@@ -1,6 +1,9 @@
+int putchar(int);
+
 char mmap_test(char * ptr) {
-    //while(*ptr) {
-        putchar(*(char*)((unsigned int)ptr | 0x10000000));
-    //}
+    while(*ptr) {
+        putchar(*ptr);
+        ptr++;
+    }
     return 0;
 }
