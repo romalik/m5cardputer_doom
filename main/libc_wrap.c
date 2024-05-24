@@ -83,3 +83,32 @@ int __wrap_strncmp(const char *s1, const char *s2, size_t n)
     //    return __real_strncmp(s1,s2,n);
     //}
 }
+
+void *__wrap_memset(void *dst, int c, size_t n)
+{
+	char *q = dst;
+
+	while (n--) {
+		*q++ = c;
+	}
+
+	return dst;
+}
+char *__wrap_strncpy(char *dst, const char *src, size_t n)
+{
+	char *q = dst;
+	const char *p = src;
+	char ch;
+
+	while (n) {
+		n--;
+		*q++ = ch = *p++;
+		if (!ch)
+			break;
+	}
+
+	/* The specs say strncpy() fills the entire buffer with NUL.  Sigh. */
+	__wrap_memset(q, 0, n);
+
+	return dst;
+}

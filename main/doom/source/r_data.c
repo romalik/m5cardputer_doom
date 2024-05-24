@@ -165,7 +165,14 @@ static const texture_t* R_LoadTexture(int texture_num)
     {
         const texpatch_t* patch = &texture->patches[j];
 
+
+        printf("Suspect here\n");
         //Check for patch overlaps.
+        printf("patch %p\n", patch);
+        printf("patch->patch %p\n", patch->patch);
+        printf("patch->patch->width %d\n", patch->patch->width);
+
+
         int l1 = patch->originx;
         int r1 = l1 + patch->patch->width;
 
@@ -287,6 +294,8 @@ static int R_GetTextureNumForName(const char* tex_name)
 
 int R_LoadTextureByName(const char* tex_name)
 {
+
+    printf("R_LoadTextureByName()\n");
     if(tex_name[0] == '-')
         return NO_TEXTURE;
 

@@ -1,37 +1,44 @@
 
-typedef struct memblock_s
-{
-    //unsigned int size24:24;	// including the header and possibly tiny fragments
-    unsigned int tag4:4;	// purgelevel
-    unsigned int tag8:8;	// purgelevel
-    void**		user;	// NULL if a free block
-    struct memblock_s*	next;
-    struct memblock_s*	prev;
-} memblock_t;
 
 typedef struct
 {
-    
-    int* sector;      // Sector the SideDef is facing.
+    short		width;		// bounding box size
+    short		height;
+    short		leftoffset;	// pixels to the left of origin
+    short		topoffset;	// pixels below the origin
+    int			columnofs[8];	// only [width] used
+    // the [0] is &columnofs[width]
+} patch_t;
 
-    short textureoffset; // add this to the calculated texture column
-    short rowoffset;     // add this to the calculated texture top
-    
-    unsigned int toptexture:10;
-    unsigned int bottomtexture:10;
-    unsigned int midtexture:10;
+typedef struct
+{
+  short originx, originy;  // Block origin, which has already accounted
+  const patch_t* patch;    // for the internal origin of the patch.
+} texpatch_t;
 
-} side_t;
+typedef struct
+{
+  const char*  name;         // Keep name for switch changing, etc.
+  //int   next, index;     // killough 1/31/98: used in hashing algorithm
+  // CPhipps - moved arrays with per-texture entries to elements here
+  unsigned short  widthmask;
+  // CPhipps - end of additions
+  short width, height;
 
-extern side_t * hz;
-extern unsigned int aaaa;
-extern unsigned int bbbb;
-extern unsigned int cccc;
-extern unsigned int dddd;
+  unsigned char overlapped;
+  unsigned char patchcount;      // All the patches[patchcount] are drawn
+  texpatch_t patches[1]; // back-to-front into the cached texture.
+} texture_t;
 
+
+
+texture_t* texture;
 int main() {
-    bbbb = hz->toptexture;
-    cccc = hz->bottomtexture;
-    aaaa = hz->midtexture;
 
+    const texpatch_t* patch = &texture->patches[j];
+
+
+
+    int l1 = 1234;
+    int r1 = l1 + patch->patch->width;
 }

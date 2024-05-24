@@ -385,7 +385,10 @@ static void G_DoLoadLevel (void)
     //  we look for an actual index, instead of simply
     //  setting one.
 
+    printf("G_DoLoadLevel()\n");
+
     _g->skyflatnum = R_FlatNumForName ( SKYFLATNAME );
+    printf("G_DoLoadLevel() 1\n");
 
     // DOOM determines the sky texture to be used
     // depending on the current episode, and the game version.
@@ -416,6 +419,7 @@ static void G_DoLoadLevel (void)
         }//jff 3/27/98 end sky setting fix
 
     /* cph 2006/07/31 - took out unused levelstarttic variable */
+    printf("G_DoLoadLevel() 2\n");
 
     if (_g->wipegamestate == GS_LEVEL)
         _g->wipegamestate = -1;             // force a wipe
@@ -447,6 +451,7 @@ static void G_DoLoadLevel (void)
     // killough 5/13/98: in case netdemo has consoleplayer other than green
     ST_Start();
     HU_Start();
+    printf("G_DoLoadLevel() end\n");
 }
 
 

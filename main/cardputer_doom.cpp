@@ -315,17 +315,18 @@ extern "C" void my_putc(char c) {
 
 #define MAX_MMAP_FILE_SIZE         16*1024*1024U
 // 4 Kb
-#define MMAP_PAGE_CHUNK_SHIFT      12
+#define MMAP_PAGE_CHUNK_SHIFT      9
 #define MMAP_PAGE_SIZE             (1UL<<(MMAP_PAGE_CHUNK_SHIFT))
 #define MMAP_PAGE_POSITION_MASK    (MMAP_PAGE_SIZE-1)
 
-#define MMAP_ARENA_N_PAGES 3
+#define MMAP_ARENA_N_PAGES 120
 
 typedef struct mmap_page {
     char data[MMAP_PAGE_SIZE];
     //unsigned int next_ptr;
     char file_id;
     unsigned int chunk_idx; //merge file id and chunk idx
+    unsigned int ttl;
 } mmap_page_t;
 
 
@@ -337,6 +338,7 @@ extern "C" void my_mmap_init() {
     memset(mmap_arena, 0, sizeof(mmap_page_t) * MMAP_ARENA_N_PAGES);
     for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
         mmap_arena[i].file_id = -1;
+        mmap_arena[i].ttl = 0;
         printf("mmap_arena[%d]: %p\n", i, &mmap_arena[i]);
     }
 }
@@ -363,31 +365,50 @@ extern "C" void my_unmmap(FILE * fd) {
         }
     }
 }
+mmap_page_t * prev_page = mmap_arena;
+mmap_page_t * before_prev_page = mmap_arena;
 
 extern "C" mmap_page_t * get_mmap_page_for_id_and_offset(int id, unsigned int chunk_idx) {
     //printf("get_mmap_page_for_id_and_offset(%d, %d)\n", id, chunk_idx);
+    if(prev_page->file_id == id && prev_page->chunk_idx == chunk_idx) {
+        return prev_page;
+    }
+
+    if(before_prev_page->file_id == id && before_prev_page->chunk_idx == chunk_idx) {
+        return before_prev_page;
+    }
+
+    mmap_page_t * ret = NULL;
+
     for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
         if(mmap_arena[i].file_id == id && mmap_arena[i].chunk_idx == chunk_idx) {
             //printf("get_mmap_page_for_id_and_offset() -> %p\n", &mmap_arena[i]);
-            return &mmap_arena[i];
+            before_prev_page = prev_page;
+            prev_page = &mmap_arena[i];
+            ret = &mmap_arena[i];
+            ret->ttl = 0xffff;
+        } else {
+            if(mmap_arena[i].ttl) mmap_arena[i].ttl--;
         }
     }
-    return NULL;
+
+    return ret;
 }
 
-int __p_idx = 0;
-extern "C" unsigned int get_page_idx_to_swap_out() {
-    unsigned int r = __p_idx;
-    __p_idx++;
-    if(__p_idx == MMAP_ARENA_N_PAGES) __p_idx = 0;
 
-    return r;
+extern "C" mmap_page_t * get_page_to_swap_out() {
+    mmap_page_t * min_ttl_page = mmap_arena;
+    for(int i = 1; i<MMAP_ARENA_N_PAGES; i++) {
+        if(mmap_arena[i].ttl < min_ttl_page->ttl) min_ttl_page = &mmap_arena[i];
+    }
+
+    return min_ttl_page;
 }
 
-extern "C" void swap_in_page(int page_idx, int file_id, unsigned int chunk_idx, unsigned int offset) {
+extern "C" void swap_in_page(mmap_page_t * page, int file_id, unsigned int chunk_idx, unsigned int offset) {
     //printf("\n\n---\nswap_in_page(%d, %d, %d, %d)\n---\n", page_idx, file_id, chunk_idx, offset);
     fseek(mmaped_files[file_id], chunk_idx<<MMAP_PAGE_CHUNK_SHIFT, SEEK_SET);
-    size_t n_read = fread(mmap_arena[page_idx].data, 1, MMAP_PAGE_SIZE, mmaped_files[file_id]);
+    fread(page->data, MMAP_PAGE_SIZE, 1, mmaped_files[file_id]);
     /*
     if(n_read < MMAP_PAGE_SIZE) {
         mmap_arena[page_idx].data[n_read] = 0;
@@ -395,8 +416,9 @@ extern "C" void swap_in_page(int page_idx, int file_id, unsigned int chunk_idx, 
         //added for test_mmu impl
     }
     */
-    mmap_arena[page_idx].chunk_idx = chunk_idx;
-    mmap_arena[page_idx].file_id = file_id;
+    page->chunk_idx = chunk_idx;
+    page->file_id = file_id;
+    page->ttl = 0xffff;
     //mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
     //printf("swap_in_page next_ptr 0x%08x\n", mmap_arena[page_idx].next_ptr);
 }
@@ -411,10 +433,11 @@ extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
     mmap_page_t * page = get_mmap_page_for_id_and_offset(file_id, chunk_idx);
 
     if(page == NULL) {
-        int p_idx = get_page_idx_to_swap_out();
+        page = get_page_to_swap_out();
+        //printf("-> [%d](%d)\n", page - mmap_arena, page->chunk_idx);
         //printf("get_ptr_to_buffer() swapout %d\n", p_idx);
-        swap_in_page(p_idx, file_id, chunk_idx, offset);
-        page = &mmap_arena[p_idx];
+        swap_in_page(page, file_id, chunk_idx, offset);
+        //printf("<- [%d](%d)\n", page - mmap_arena, page->chunk_idx);
     }
     //printf("get_ptr_to_buffer() -> %lu\n", (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK));
     return (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK);
