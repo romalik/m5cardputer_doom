@@ -315,11 +315,11 @@ extern "C" void my_putc(char c) {
 
 #define MAX_MMAP_FILE_SIZE         16*1024*1024U
 // 4 Kb
-#define MMAP_PAGE_CHUNK_SHIFT      9
+#define MMAP_PAGE_CHUNK_SHIFT      8
 #define MMAP_PAGE_SIZE             (1UL<<(MMAP_PAGE_CHUNK_SHIFT))
 #define MMAP_PAGE_POSITION_MASK    (MMAP_PAGE_SIZE-1)
 
-#define MMAP_ARENA_N_PAGES 120
+#define MMAP_ARENA_N_PAGES 400
 
 typedef struct mmap_page {
     char data[MMAP_PAGE_SIZE];
@@ -386,7 +386,7 @@ extern "C" mmap_page_t * get_mmap_page_for_id_and_offset(int id, unsigned int ch
             before_prev_page = prev_page;
             prev_page = &mmap_arena[i];
             ret = &mmap_arena[i];
-            ret->ttl = 0xffff;
+            ret->ttl = 0xffffffff;
         } else {
             if(mmap_arena[i].ttl) mmap_arena[i].ttl--;
         }
@@ -402,6 +402,7 @@ extern "C" mmap_page_t * get_page_to_swap_out() {
         if(mmap_arena[i].ttl < min_ttl_page->ttl) min_ttl_page = &mmap_arena[i];
     }
 
+    printf("Swap out ttl 0x%08x\n", min_ttl_page->ttl);
     return min_ttl_page;
 }
 
@@ -418,7 +419,7 @@ extern "C" void swap_in_page(mmap_page_t * page, int file_id, unsigned int chunk
     */
     page->chunk_idx = chunk_idx;
     page->file_id = file_id;
-    page->ttl = 0xffff;
+    page->ttl = 0xffffffff;
     //mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
     //printf("swap_in_page next_ptr 0x%08x\n", mmap_arena[page_idx].next_ptr);
 }
@@ -546,7 +547,7 @@ extern "C" void init_wad() {
     doom_iwad = (unsigned char*)doom_iwad_builtin;
     doom_iwad_len = 4676420UL;
 #else
-    FILE * doom_wad_file = fopen("/sd/gdoom1.wad", "r");
+    FILE * doom_wad_file = fopen("/sd/gdoom2.wad", "r");
     fseek(doom_wad_file, 0L, SEEK_END);
     doom_iwad_len = ftell(doom_wad_file);
 

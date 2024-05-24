@@ -31,6 +31,7 @@ typedef struct
 } texture_t;
 
 
+    patch_t *aaa;
 
 texture_t* texture;
 int main() {
@@ -38,7 +39,9 @@ int main() {
     const texpatch_t* patch = &texture->patches[j];
 
 
-
     int l1 = 1234;
+
+    //int l2 = aaa->width;
+
     int r1 = l1 + patch->patch->width;
 }

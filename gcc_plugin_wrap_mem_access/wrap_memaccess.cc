@@ -289,7 +289,7 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
 
         tree repr = DECL_BIT_FIELD_REPRESENTATIVE(TREE_OPERAND(t, 1));
-        fprintf(stderr, "repr size in bytes: %d\n",int_size_in_bytes(TREE_TYPE(repr)));
+        fprintf(stderr, "repr size in bytes: %lu\n",int_size_in_bytes(TREE_TYPE(repr)));
         instrument_derefs(iter, build3(COMPONENT_REF, TREE_TYPE(repr), TREE_OPERAND(t, 0), repr, TREE_OPERAND(t, 2)),
                           location, is_store, t);
         return;
@@ -406,7 +406,7 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
             int shift_to_msb = (int_size_in_bytes(TREE_TYPE(lshifted_value))*8) - (bitpos_in_region + bitsize.to_constant());
 
-            fprintf(stderr, "target size_in_bytes %d %dbits\n", int_size_in_bytes(TREE_TYPE(lshifted_value)), int_size_in_bytes(TREE_TYPE(lshifted_value))*8);
+            fprintf(stderr, "target size_in_bytes %lu %lubits\n", int_size_in_bytes(TREE_TYPE(lshifted_value)), int_size_in_bytes(TREE_TYPE(lshifted_value))*8);
             fprintf(stderr, "shift_to_msb %d\n", shift_to_msb);
 
             gimple * bitfield_adjust_lshift = gimple_build_assign   (   lshifted_value,
@@ -450,7 +450,9 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
         }
 
+        
         gsi_remove(iter, true);
+        gsi_prev(iter);
     }
 }
 
@@ -584,10 +586,19 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
 {
     gimple *s = gsi_stmt (*iter);
 
-    gcc_assert (gimple_assign_single_p (s));
+    //gcc_assert (gimple_assign_single_p (s));
 
     tree ref_expr = NULL_TREE;
     bool is_store, is_instrumented = false;
+
+    fprintf(stderr, "maybe_instrument_assignment\n");
+            {
+                pretty_printer buffer;
+                pp_needs_newline (&buffer) = true;
+                buffer.buffer->stream = stderr;
+                pp_gimple_stmt_1 (&buffer, s, 0, 0);
+                pp_newline_and_flush (&buffer);                
+            }
 
     if (gimple_store_p (s)) {
         ref_expr = gimple_assign_lhs (s);
@@ -600,6 +611,7 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
 
     if (gimple_assign_load_p (s))
     {
+        fprintf(stderr, "Have load!\n");
         ref_expr = gimple_assign_rhs1 (s);
         is_store = false;
         instrument_derefs (iter, ref_expr,
@@ -608,9 +620,11 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
         is_instrumented = true;
     }
 
+    fprintf(stderr, "maybe_instrument_assignment done\n");
+/*
     if (is_instrumented)
         gsi_next (iter);
-
+*/
   return is_instrumented;
 }
 
@@ -930,10 +944,14 @@ namespace
 
                 gimple_stmt_iterator i;
 
-                for (i = gsi_start (seq); !gsi_end_p (i);){
+                for (i = gsi_start (seq); !gsi_end_p (i);gsi_next (&i)){
                     gimple *s = gsi_stmt (i);
+                    if(is_gimple_assign(s)) {
+                        maybe_instrument_assignment(&i);
+                    }
 
-                    if (gimple_assign_single_p (s) && maybe_instrument_assignment (&i)) {
+#if 0
+                    if (/*gimple_assign_single_p (s) &&*/ is_gimple_assign (s) && maybe_instrument_assignment (&i)) {
                         /*  Nothing to do as maybe_instrument_assignment advanced
                         the iterator I.  */
 /*                        
@@ -943,9 +961,9 @@ namespace
                         advanced the iterator I.  */
                     }else {
                         /* No instrumentation happened.*/
-                        gsi_next (&i);
+                        
                     }
-
+#endif
 
                 }
             }
