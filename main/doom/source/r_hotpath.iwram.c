@@ -35,7 +35,7 @@
 
 //This is to keep the codesize under control.
 //This whole file needs to fit within IWRAM.
-#pragma GCC optimize ("Os")
+//#pragma GCC optimize ("Os")
 
 
 #ifdef HAVE_CONFIG_H
@@ -529,8 +529,8 @@ static const lighttable_t* R_LoadColorMap(int lightlevel)
 //  be used. It has also been used with Wolfenstein 3D.
 //
 
-#pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+//#pragma GCC push_options
+//#pragma GCC optimize ("Ofast")
 
 #define COLEXTRABITS 9
 #define COLBITS (FRACBITS + COLEXTRABITS)
@@ -720,7 +720,7 @@ static void R_DrawFuzzColumn (const draw_column_vars_t *dcvars)
     _g->fuzzpos = fuzzpos;
 }
 
-#pragma GCC pop_options
+//#pragma GCC pop_options
 
 
 
@@ -1272,8 +1272,8 @@ static void R_DrawMasked(void)
 //  and the inner loop has to step in texture space u and v.
 //
 
-#pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+//#pragma GCC push_options
+//#pragma GCC optimize ("Ofast")
 
 inline static void R_DrawSpanPixel(unsigned short* dest, const byte* source, const byte* colormap, unsigned int position)
 {
@@ -1348,7 +1348,7 @@ static void R_DrawSpan(unsigned int y, unsigned int x1, unsigned int x2, const d
     }
 }
 
-#pragma GCC pop_options
+//#pragma GCC pop_options
 
 static void R_MapPlane(unsigned int y, unsigned int x1, unsigned int x2, draw_span_vars_t *dsvars)
 {    

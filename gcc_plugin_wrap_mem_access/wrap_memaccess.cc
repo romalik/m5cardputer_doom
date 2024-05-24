@@ -60,6 +60,8 @@
 #include "builtins.h"
 #include "fnmatch.h"
 #include "tree-inline.h"
+#include "convert.h"
+#include "cp/cp-tree.h"
 
 // We must assert that this plugin is GPL compatible
 int plugin_is_GPL_compatible;
@@ -205,6 +207,8 @@ build_check_stmt(location_t loc, tree base, tree len,
     return tmp_ptr;
 }
 
+
+
 /* If T represents a memory access, add instrumentation code before ITER.
    LOCATION is source code location.
    IS_STORE is either TRUE (for a store) or FALSE (for a load).  */
@@ -214,8 +218,28 @@ build_check_stmt(location_t loc, tree base, tree len,
 
 static void
 instrument_derefs(gimple_stmt_iterator *iter, tree t,
-                  location_t location, bool is_store)
+                  location_t location, bool is_store, tree bitfield)
 {
+
+
+
+        if(bitfield) {
+       
+        /*
+                fprintf(stderr, "Bitfield!\n");
+                tree aaa = make_ssa_name (integer_type_node);
+                gimple * ggg = gimple_build_assign(t,t);
+                pretty_printer buffer;
+                pp_needs_newline (&buffer) = true;
+                buffer.buffer->stream = stderr;
+                pp_gimple_stmt_1 (&buffer, ggg, 0, 0);
+                pp_newline_and_flush (&buffer);
+                */
+
+        }
+
+
+
     if (is_store && !MY_INSTRUMENT_WRITES)
         return;
     if (!is_store && !MY_INSTRUMENT_READS)
@@ -254,9 +278,20 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
     if (TREE_CODE(t) == COMPONENT_REF && DECL_BIT_FIELD_REPRESENTATIVE(TREE_OPERAND(t, 1)) != NULL_TREE)
     {
+        /*
+        ***********************************8
+        possible ways to solve:
+
+         - get_bit_range
+
+         - val = convert_to_integer_nofold (TYPE_MAIN_VARIANT (bitfield_type), val);
+        */
+
+
         tree repr = DECL_BIT_FIELD_REPRESENTATIVE(TREE_OPERAND(t, 1));
+        fprintf(stderr, "repr size in bytes: %d\n",int_size_in_bytes(TREE_TYPE(repr)));
         instrument_derefs(iter, build3(COMPONENT_REF, TREE_TYPE(repr), TREE_OPERAND(t, 0), repr, TREE_OPERAND(t, 2)),
-                          location, is_store);
+                          location, is_store, t);
         return;
     }
 
@@ -301,22 +336,120 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
                                         is_store, /*is_scalar_access*/ true, align);
 
 
-        gimple * cast_type = build_type_cast(build_pointer_type(type), new_ptr);
+        //gimple * cast_type = build_type_cast(build_pointer_type(TREE_TYPE(gimple_assign_lhs(gsi_stmt(*iter)))), new_ptr);
 
-        gimple * new_assign = gimple_build_assign(  gimple_assign_lhs(gsi_stmt(*iter)),  
-                                                    build_simple_mem_ref(  
-                                                        //build_int_cst(integer_type_node, 1234)
+
+
+
+
+
+        if (!bitfield)
+        {
+            gimple * cast_type = build_type_cast(build_pointer_type(TREE_TYPE(gimple_assign_lhs(gsi_stmt(*iter)))), new_ptr);
+            gimple * new_assign = gimple_build_assign(  gimple_assign_lhs(gsi_stmt(*iter)),  
+                                                        build_simple_mem_ref(  
+                                                            //build_int_cst(integer_type_node, 1234)
+                                                            gimple_assign_lhs(cast_type)
+                                                        )
+                                                    );
+
+            gsi_insert_before(iter, cast_type, GSI_SAME_STMT);
+            gsi_insert_before(iter, new_assign, GSI_SAME_STMT);
+
+
+        } else {
+
+            machine_mode mode1;
+            poly_int64 bitsize, bitpos;
+            poly_uint64 bitregion_start = 0;
+            poly_uint64 bitregion_end = 0;
+            tree offset;
+            int unsignedp, reversep, volatilep = 0;
+
+
+            /*tem = */get_inner_reference(bitfield, &bitsize, &bitpos, &offset, &mode1,
+                                      &unsignedp, &reversep, &volatilep);
+
+            if (maybe_lt(bitpos, 0))
+            {
+                gcc_assert(offset == NULL_TREE);
+                offset = size_int(bits_to_bytes_round_down(bitpos));
+                bitpos = num_trailing_bits(bitpos);
+            }
+            if (TREE_CODE(bitfield) == COMPONENT_REF && DECL_BIT_FIELD_TYPE(TREE_OPERAND(bitfield, 1)))
+                get_bit_range(&bitregion_start, &bitregion_end, bitfield, &bitpos, &offset);
+            /* The C++ memory model naturally applies to byte-aligned fields.
+           However, if we do not have a DECL_BIT_FIELD_TYPE but BITPOS or
+           BITSIZE are not byte-aligned, there is no need to limit the range
+           we can access.  This can occur with packed structures in Ada.  */
+            else if (maybe_gt(bitsize, 0) && multiple_p(bitsize, BITS_PER_UNIT) && multiple_p(bitpos, BITS_PER_UNIT))
+            {
+                bitregion_start = bitpos;
+                bitregion_end = bitpos + bitsize - 1;
+            }
+
+            fprintf(stderr, "bitregion start %lu end %lu bitpos %ld bitsize %ld\n", bitregion_start.to_constant(), bitregion_end.to_constant(), bitpos.to_constant(), bitsize.to_constant());
+
+
+            tree derefed_value = make_ssa_name (integer_type_node);
+            gimple * cast_type_repr = build_type_cast(build_pointer_type(integer_type_node), new_ptr);
+            gimple * bitfield_deref_repr = gimple_build_assign      (   derefed_value,
+                                                                        build_simple_mem_ref(  
+                                                                            gimple_assign_lhs(cast_type_repr)
+                                                                        )
+                                                                    );
+
+            tree lshifted_value = make_ssa_name (integer_type_node);
+
+            int bitpos_in_region = bitpos.to_constant() - bitregion_start.to_constant();
+            
+
+            int shift_to_msb = (int_size_in_bytes(TREE_TYPE(lshifted_value))*8) - (bitpos_in_region + bitsize.to_constant());
+
+            fprintf(stderr, "target size_in_bytes %d %dbits\n", int_size_in_bytes(TREE_TYPE(lshifted_value)), int_size_in_bytes(TREE_TYPE(lshifted_value))*8);
+            fprintf(stderr, "shift_to_msb %d\n", shift_to_msb);
+
+            gimple * bitfield_adjust_lshift = gimple_build_assign   (   lshifted_value,
+                                                                        LSHIFT_EXPR,  
+                                                                        derefed_value,
+                                                                        build_int_cst(
+                                                                            integer_type_node, 
+                                                                            shift_to_msb
+                                                                        )
+                                                                    );
+
+            tree rshifted_value = make_ssa_name (integer_type_node);
+
+
+            int shift_to_lsb = shift_to_msb + bitpos_in_region;
+            fprintf(stderr, "shift_to_lsb %d\n", shift_to_lsb);
+
+            gimple * bitfield_adjust_rshift  = gimple_build_assign  (   rshifted_value,
+                                                                        RSHIFT_EXPR,  
+                                                                        lshifted_value,
+                                                                        build_int_cst(
+                                                                            integer_type_node,
+                                                                            shift_to_lsb
+                                                                        )
+                                                                    );
+
+            gimple * cast_type = build_type_cast(type, rshifted_value);
+
+            gimple * new_assign = gimple_build_assign(  gimple_assign_lhs(gsi_stmt(*iter)),  
                                                         gimple_assign_lhs(cast_type)
-                                                    )
-                                                  );
+                                                    );
 
-        //fprintf(stderr, "Tree code for lhs: %s\n", get_tree_code_name(TREE_CODE(gimple_assign_lhs(new_assign))));
-        //fprintf(stderr, "Tree code for rhs1: %s\n", get_tree_code_name(TREE_CODE(gimple_assign_rhs1(new_assign))));
-        //gimple_assign_set_rhs_from_tree(iter, build_simple_mem_ref_loc(EXPR_LOCATION(new_ptr), new_ptr));//build_int_cst(ptr_type_node, 1234))
-        
-        gsi_insert_before(iter, cast_type, GSI_SAME_STMT);
-        
-        gsi_insert_before(iter, new_assign, GSI_SAME_STMT);
+
+
+            gsi_insert_before(iter, cast_type_repr, GSI_SAME_STMT);
+            gsi_insert_before(iter, bitfield_deref_repr, GSI_SAME_STMT);
+            gsi_insert_before(iter, bitfield_adjust_lshift, GSI_SAME_STMT);
+            gsi_insert_before(iter, bitfield_adjust_rshift, GSI_SAME_STMT);
+            gsi_insert_before(iter, cast_type, GSI_SAME_STMT);
+            gsi_insert_before(iter, new_assign, GSI_SAME_STMT);
+
+        }
+
         gsi_remove(iter, true);
     }
 }
@@ -461,7 +594,7 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
         is_store = true;
         instrument_derefs (iter, ref_expr,
                 gimple_location (s),
-                is_store);
+                is_store, NULL_TREE);
         is_instrumented = true;
     }
 
@@ -471,7 +604,7 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
         is_store = false;
         instrument_derefs (iter, ref_expr,
                 gimple_location (s),
-                is_store);
+                is_store, NULL_TREE);
         is_instrumented = true;
     }
 
@@ -787,8 +920,8 @@ namespace
             {
                 FILE *file = stderr;
                 gimple_seq seq = gimple_body;
-                int spc = 3;
-                dump_flags_t flags = static_cast<dump_flags_t>(0);
+                //int spc = 3;
+                //dump_flags_t flags = static_cast<dump_flags_t>(0);
 
 
                 pretty_printer buffer;

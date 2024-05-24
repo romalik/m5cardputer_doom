@@ -325,6 +325,8 @@ static void R_InitTextures()
 
     _g->numtextures = numtextures1 + numtextures2;
 
+    printf("going to z_malloc %d\n",_g->numtextures*sizeof*textures);
+
     textures = Z_Malloc(_g->numtextures*sizeof*textures, PU_STATIC, 0);
     memset(textures, 0, _g->numtextures*sizeof*textures);
 

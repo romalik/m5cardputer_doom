@@ -30,7 +30,7 @@ KEYBOARD::Keyboard* __keyboard;
 
 bool scale = true;
 
-void __update_sprite() {
+extern "C" void __update_sprite() {
 
     if(scale) {
         doom_canvas->pushRotateZoom(240.0f/2.0f,135.0f/2.0f,0.0f,1.0f,(135.0f/160.0f));
@@ -40,16 +40,9 @@ void __update_sprite() {
         
 }
 
-void __set_sprite_pallete(unsigned char * pallete) {
+extern "C" void __set_sprite_pallete(unsigned int i, unsigned char r, unsigned char g, unsigned char b) {
     printf("__set_sprite_pallete()\n");
-    for(int i = 0; i< 256; i++)
-    {
-        unsigned int r = *pallete++;
-        unsigned int g = *pallete++;
-        unsigned int b = *pallete++;
-
-        doom_canvas->setPaletteColor(i,r,g,b);
-    }
+    doom_canvas->setPaletteColor(i,r,g,b);
 }
 
 #include <queue>
@@ -208,7 +201,7 @@ void check_evts() {
 
 }
 
-unsigned char __get_event() {
+extern "C" unsigned char __get_event() {
     check_evts();
     if(evt_queue.empty()) {
         return 0;
@@ -354,7 +347,7 @@ extern "C" char * my_mmap(FILE * fd) {
     for(int i = 0; i<16; i++) {
         if(mmaped_files[i] == NULL) {
             mmaped_files[i] = fd;
-            retval = (char *)((0xf0 | (i&0x0f)) << (8*3));
+            retval = (char *)((0x80 | (i&0x0f)) << (8*3));
             break;
         }
     }
@@ -392,14 +385,16 @@ extern "C" unsigned int get_page_idx_to_swap_out() {
 }
 
 extern "C" void swap_in_page(int page_idx, int file_id, unsigned int chunk_idx, unsigned int offset) {
-    printf("\n\n---\nswap_in_page(%d, %d, %d, %d)\n---\n", page_idx, file_id, chunk_idx, offset);
-    fseek(mmaped_files[file_id], offset, SEEK_SET);
+    //printf("\n\n---\nswap_in_page(%d, %d, %d, %d)\n---\n", page_idx, file_id, chunk_idx, offset);
+    fseek(mmaped_files[file_id], chunk_idx<<MMAP_PAGE_CHUNK_SHIFT, SEEK_SET);
     size_t n_read = fread(mmap_arena[page_idx].data, 1, MMAP_PAGE_SIZE, mmaped_files[file_id]);
+    /*
     if(n_read < MMAP_PAGE_SIZE) {
         mmap_arena[page_idx].data[n_read] = 0;
         //remove me
         //added for test_mmu impl
     }
+    */
     mmap_arena[page_idx].chunk_idx = chunk_idx;
     mmap_arena[page_idx].file_id = file_id;
     //mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
@@ -428,8 +423,10 @@ extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
 
 
 
-extern "C" void * __remap_ptr(void * ptr) {
-    if(((unsigned int)ptr & 0xf0000000) == 0xf0000000) {
+extern "C" void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int align) {
+    //return ptr;
+    //printf("__remap_ptr check\n");
+    if(((unsigned int)ptr & 0x80000000)) {
         unsigned int val = get_ptr_to_buffer(ptr);
         //printf("\n---\nTrap! %p replace with 0x%08X\n", ptr, val);
         return (void*)val;            
@@ -438,6 +435,8 @@ extern "C" void * __remap_ptr(void * ptr) {
         return ptr;
     }
 }
+
+
 
 /*
 static inline void do_stack_sift(void * ptr) {
@@ -503,6 +502,8 @@ char test_string[] = "[[this is normal memory]]\n";
 
 #include "doom_iwad.h"
 
+extern const unsigned char doom_iwad_builtin[4676420UL];
+
 extern "C" void init_wad() {
     my_mmap_init();
 
@@ -518,10 +519,10 @@ extern "C" void init_wad() {
     printf("call mmap_test with ptr %p\n", mmaped_file);
     mmap_test(mmaped_file);
 */
-
+#if 0
     doom_iwad = (unsigned char*)doom_iwad_builtin;
     doom_iwad_len = 4676420UL;
-
+#else
     FILE * doom_wad_file = fopen("/sd/gdoom1.wad", "r");
     fseek(doom_wad_file, 0L, SEEK_END);
     doom_iwad_len = ftell(doom_wad_file);
@@ -531,6 +532,7 @@ extern "C" void init_wad() {
     rewind(doom_wad_file);
 
     doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
+#endif
 }
 
 
