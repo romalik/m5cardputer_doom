@@ -11,22 +11,16 @@
 
 
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "hal/hal_cardputer.h"
-
-
-
-using namespace HAL;
-
-
-
-HalCardputer hal;
+#undef FILE
+#include "hal/display/hal_display.hpp"
+#include "fat.h"
 
 unsigned short * __sprite_data;
 
 LGFX_Sprite * doom_canvas;
-
-KEYBOARD::Keyboard* __keyboard;
 
 bool scale = true;
 
@@ -41,7 +35,6 @@ extern "C" void __update_sprite() {
 }
 
 extern "C" void __set_sprite_pallete(unsigned int i, unsigned char r, unsigned char g, unsigned char b) {
-    printf("__set_sprite_pallete()\n");
     doom_canvas->setPaletteColor(i,r,g,b);
 }
 
@@ -218,7 +211,9 @@ extern "C" unsigned char __get_event() {
 extern "C" int doom_main(int argc, const char * argv);
 
 #include <driver/sdmmc_host.h>
-#include <esp_vfs_fat.h>
+#include <driver/sdspi_host.h>
+
+//#include <esp_vfs_fat.h>
 
 // Storage
 #define RG_STORAGE_DRIVER           1                   // 0 = Host, 1 = SDSPI, 2 = SDMMC, 3 = USB, 4 = Flash
@@ -238,6 +233,9 @@ static esp_err_t sdcard_do_transaction(int slot, sdmmc_command_t *cmdinfo)
     return ret;
 }
 */
+#include "sdmmc_cmd.h"
+#include "driver/sdmmc_defs.h"
+
 static esp_err_t init_sd() {
     sdmmc_host_t host_config = SDSPI_HOST_DEFAULT();
     host_config.slot = RG_STORAGE_HOST;
@@ -260,6 +258,30 @@ static esp_err_t init_sd() {
     if (err != ESP_OK) // check but do not abort, let esp_vfs_fat_sdspi_mount decide
         printf("SPI bus init failed (0x%x)", err);
 
+    int card_handle = -1;
+    sdmmc_card_t* card = (sdmmc_card_t*)malloc(sizeof(sdmmc_card_t));
+    err = (*host_config.init)();
+    err = sdspi_host_init_device((const sdspi_device_config_t*)&slot_config, &card_handle);
+
+    if (card_handle != host_config.slot) {
+        host_config.slot = card_handle;
+    }
+
+    err = sdmmc_card_init(&host_config, card);
+
+    printf("SD card sector size: %d\n" , card->csd.sector_size);
+
+    char return_code = FAT_mountVolume(card);
+    printf("FAT_mountVolume retval : %d\n", return_code);
+
+    char label[300];
+    uint32_t vol_sn;
+    FAT_getLabel(label, &vol_sn);
+
+    printf("FAT_getLabel returns: %s 0x%08X\n", label, vol_sn);
+
+/*
+    
     esp_vfs_fat_mount_config_t mount_config = {.max_files = 8};
 
     err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
@@ -269,9 +291,11 @@ static esp_err_t init_sd() {
         host_config.max_freq_khz = SDMMC_FREQ_PROBING;
         err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
     }
+    */
     return err;
 }
 
+/*
 #include <dirent.h>
 
 void listdir(const char *name, int indent)
@@ -296,12 +320,7 @@ void listdir(const char *name, int indent)
     }
     closedir(dir);
 }
-
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include "hal/display/hal_display.hpp"
-
+*/
 
 /*
 extern "C" void __asan_load4_noabort(void * ptr) {
@@ -312,14 +331,14 @@ extern "C" void my_putc(char c) {
     printf("%c", c);
 }
 
-
+#define MMAP_COLLECT_STATISTICS 1
 #define MAX_MMAP_FILE_SIZE         16*1024*1024U
-// 4 Kb
-#define MMAP_PAGE_CHUNK_SHIFT      8
+
+#define MMAP_PAGE_CHUNK_SHIFT      9
 #define MMAP_PAGE_SIZE             (1UL<<(MMAP_PAGE_CHUNK_SHIFT))
 #define MMAP_PAGE_POSITION_MASK    (MMAP_PAGE_SIZE-1)
 
-#define MMAP_ARENA_N_PAGES 400
+#define MMAP_ARENA_N_PAGES (140000/MMAP_PAGE_SIZE)
 
 typedef struct mmap_page {
     char data[MMAP_PAGE_SIZE];
@@ -330,20 +349,30 @@ typedef struct mmap_page {
 } mmap_page_t;
 
 
+#if MMAP_COLLECT_STATISTICS
+unsigned int read_statistics[MMAP_PAGE_SIZE];
+#endif
+
+
 mmap_page_t  mmap_arena[MMAP_ARENA_N_PAGES];
 
-FILE * mmaped_files[16] = {NULL};
+F_FILE * mmaped_files[16] = {NULL};
 
 extern "C" void my_mmap_init() {
     memset(mmap_arena, 0, sizeof(mmap_page_t) * MMAP_ARENA_N_PAGES);
     for(int i = 0; i<MMAP_ARENA_N_PAGES; i++) {
         mmap_arena[i].file_id = -1;
         mmap_arena[i].ttl = 0;
-        printf("mmap_arena[%d]: %p\n", i, &mmap_arena[i]);
+        //printf("mmap_arena[%d]: %p\n", i, &mmap_arena[i]);
     }
+
+#if MMAP_COLLECT_STATISTICS
+    memset(read_statistics, 0, MMAP_PAGE_SIZE*sizeof(unsigned int));
+#endif
+
 }
 
-extern "C" char * my_mmap(FILE * fd) {
+extern "C" char * my_mmap(F_FILE * fd) {
     char * retval = NULL;
     printf("my_mmap(%p)\n", fd);
     for(int i = 0; i<16; i++) {
@@ -402,14 +431,23 @@ extern "C" mmap_page_t * get_page_to_swap_out() {
         if(mmap_arena[i].ttl < min_ttl_page->ttl) min_ttl_page = &mmap_arena[i];
     }
 
-    printf("Swap out ttl 0x%08x\n", min_ttl_page->ttl);
+    //printf("Swap out ttl 0x%08x\n", min_ttl_page->ttl);
     return min_ttl_page;
 }
 
 extern "C" void swap_in_page(mmap_page_t * page, int file_id, unsigned int chunk_idx, unsigned int offset) {
     //printf("\n\n---\nswap_in_page(%d, %d, %d, %d)\n---\n", page_idx, file_id, chunk_idx, offset);
+    
+    /*
     fseek(mmaped_files[file_id], chunk_idx<<MMAP_PAGE_CHUNK_SHIFT, SEEK_SET);
     fread(page->data, MMAP_PAGE_SIZE, 1, mmaped_files[file_id]);
+    */
+
+    assert(MMAP_PAGE_SIZE == 512);
+    
+    int retval = FAT_read_file_sector(mmaped_files[file_id], chunk_idx, page->data);
+    printf("FAT_read_file_sector() -> %d\n", retval);
+    
     /*
     if(n_read < MMAP_PAGE_SIZE) {
         mmap_arena[page_idx].data[n_read] = 0;
@@ -423,6 +461,38 @@ extern "C" void swap_in_page(mmap_page_t * page, int file_id, unsigned int chunk
     //mmap_arena[page_idx].next_ptr = ((unsigned int)(0xf0 | (file_id&0x0f)) << 8*3) | ((chunk_idx + 1) << MMAP_PAGE_CHUNK_SHIFT);
     //printf("swap_in_page next_ptr 0x%08x\n", mmap_arena[page_idx].next_ptr);
 }
+
+
+#if MMAP_COLLECT_STATISTICS
+void dump_statistics() {
+    printf("Read statistics:\n");
+    unsigned int max_reads = 0;
+    for(int i = 0; i<MMAP_PAGE_SIZE; i++) {
+        printf("[%d] %d\n", i, read_statistics[i]);
+        if(max_reads < read_statistics[i]) max_reads = read_statistics[i];
+    } 
+
+    for(int i = 0; i<MMAP_PAGE_SIZE; i+= MMAP_PAGE_SIZE / 50) {
+        unsigned int bin_avg = 0;
+        for(int j = 0; j<MMAP_PAGE_SIZE / 50; j++) {
+            bin_avg += read_statistics[i+j] / (MMAP_PAGE_SIZE / 50);
+        }
+        printf("[0x%08X - 0x%08X]: (%08d) :", i, (unsigned int)(i+MMAP_PAGE_SIZE/50), bin_avg);
+        int n_stars = 100 * bin_avg / max_reads;
+        for(int j = 0; j<n_stars; j++) {
+            printf("*");
+        }
+        printf("\n");
+    }
+
+    printf("Halt\n");
+
+    while(1) {}
+}
+
+#endif
+
+
 
 extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
     int file_id = (((unsigned int)ptr & 0x0f000000) >> (8*3));
@@ -441,6 +511,20 @@ extern "C" unsigned int get_ptr_to_buffer(void * ptr) {
         //printf("<- [%d](%d)\n", page - mmap_arena, page->chunk_idx);
     }
     //printf("get_ptr_to_buffer() -> %lu\n", (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK));
+
+#if MMAP_COLLECT_STATISTICS
+    read_statistics[offset & MMAP_PAGE_POSITION_MASK]++;
+    static unsigned int read_n = 0;
+    read_n++;
+    if(read_n % 0x00100000 == 0) {
+        printf("******************** read_n 0x%08X\n", read_n);
+
+    }
+    if(read_n == 0x01000000) {
+        dump_statistics();
+    }
+
+#endif
     return (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK);
 }
 
@@ -528,11 +612,12 @@ char test_string[] = "[[this is normal memory]]\n";
 
 extern const unsigned char doom_iwad_builtin[4676420UL];
 
+
 extern "C" void init_wad() {
     my_mmap_init();
 
 
-    listdir("/sd", 0);
+    //listdir("/sd", 0);
 
 /*
     FILE * file = fopen("/sd/big_file", "r");
@@ -547,29 +632,53 @@ extern "C" void init_wad() {
     doom_iwad = (unsigned char*)doom_iwad_builtin;
     doom_iwad_len = 4676420UL;
 #else
-    FILE * doom_wad_file = fopen("/sd/gdoom2.wad", "r");
-    fseek(doom_wad_file, 0L, SEEK_END);
-    doom_iwad_len = ftell(doom_wad_file);
+    DIR dir;
+
+    F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
+    FAT_openDir(&dir, "/");
+    FAT_fopen(&dir, doom_wad_file, "gdoom2.wad");
+    doom_iwad_len = doom_wad_file->file_size;
 
     printf("WAD size: %d\n", doom_iwad_len);
 
-    rewind(doom_wad_file);
+    //rewind(doom_wad_file);
 
     doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
 #endif
 }
 
+void memcheck(char * tag) {
+    unsigned int heapSize = 512000;
+    void * ptr = NULL;
+    //We can now alloc all of the rest fo the memory.
+    do
+    {
+        ptr = malloc(heapSize);
+        heapSize -= 4;
+
+    } while(ptr == NULL);
+
+    free(ptr);
+    printf("Heapsize at %s is %d bytes\n", tag, heapSize);
+}
 
 extern "C" void app_main(void)
 {
+
+    printf("MMAP_PAGE_SIZE: %lu\n", MMAP_PAGE_SIZE);
+    memcheck("Start");
     printf("Init SD\n");
     if(!init_sd() == ESP_OK) {
         printf("SD Init Failed!\n");
     }
     delay(500);
+    memcheck("SD Init");
+
     init_wad();
-    mkdir("/sd/doom", 0775);
+    memcheck("WAD Init");
+    //mkdir("/sd/doom", 0775);
     kb_init(kb_output_list, kb_input_list);
+    memcheck("KB Init");
 
     printf("initCanvas\n");
     LGFX_Cardputer * _display = new LGFX_Cardputer;
@@ -580,6 +689,8 @@ extern "C" void app_main(void)
     doom_canvas->createPalette();
     
     doom_canvas->createSprite(240,160);
+
+    memcheck("Display Init");
     
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
 
@@ -603,10 +714,71 @@ extern "C" void app_main(void)
 
 }
 
-/*
-extern "C" void app_main(void)
+
+void F_listdir() {
+        DIR dir;	// directory object
+        F_FILE file;	// file object
+    	int return_code = FAT_openDir(&dir, "/");
+		
+		if(return_code == FR_OK){
+            printf("Opened dir %s\n", FAT_getFilename());
+			
+			
+			// Get number of folders and files inside the directory
+			int dirItems = FAT_dirCountItems(&dir);
+            printf("Folder has %d items:\n", dirItems);
+			// Print folder content
+			for(uint16_t i = 0; i < dirItems; i++){
+				return_code = FAT_findNext(&dir, &file);
+				
+				if(FAT_attrIsFolder(&file)){
+					printf("D, "); // Directory
+				}else{
+					printf("F, "); // File
+				}
+				
+				printf("Idx: %d , %s\n", FAT_getItemIndex(&dir), FAT_getFilename());
+			}
+		}else{
+            printf("Can not open dir! %d\n", return_code);
+		}
+}
+
+extern "C" void app_main_(void)
 {
-    printf("Init SD\n");
+    int return_code;
+    F_FILE file;
+    DIR dir;
+
+    printf("Hello, init sd\n");
+    init_sd();
+    F_listdir();
+    FAT_openDir(&dir, "/");
+    FAT_fopen(&dir, &file, "big_file");
+    int file_size = FAT_getFileSize(&file);
+    printf("File 'big_file' size : %d\n",file_size);
+
+
+    printf("Read file:\n");
+    int c_sector = 0;
+    char buf[512];
+    while(file_size > 0) {
+        FAT_read_file_sector(&file, c_sector, buf);
+        for(int i = 0; i<std::min(512, file_size); i++) {
+            putchar(buf[i]);
+        }
+        file_size -= 512;
+        c_sector++;
+    }
+
+
+
+
+
+    while(1){}
+
+
+/*
     if(!init_sd() == ESP_OK) {
         printf("SD Init Failed!\n");
     }
@@ -622,5 +794,5 @@ extern "C" void app_main(void)
     printf("call mmap_test with ptr %p\n", mmaped_file);
     mmap_test(mmaped_file);
     while(1);
+    */
 }
-*/

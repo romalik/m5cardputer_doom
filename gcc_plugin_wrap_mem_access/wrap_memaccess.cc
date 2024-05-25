@@ -971,7 +971,7 @@ namespace
 
             std::cerr << "\n\nAfter replace:\n\n";
 
-            print_gimple_seq(stderr, gimple_body, 0, static_cast<dump_flags_t>(0));
+            print_gimple_seq(stderr, fun->gimple_body, 0, static_cast<dump_flags_t>(0));
             std::cerr << "*******************\n\n";
 
             return 0;

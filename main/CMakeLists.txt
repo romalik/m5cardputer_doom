@@ -4,6 +4,9 @@ file(GLOB_RECURSE DOOM_SRCS
     ./doom/*.c
     ./doom/*.cpp
 )
+file(GLOB_RECURSE FS_SRCS
+    ./fs/*.c
+)
 
 file(GLOB_RECURSE HAL_SRCS
     ./hal/*.c
@@ -12,8 +15,8 @@ file(GLOB_RECURSE HAL_SRCS
 
 list(APPEND DOOM_SRCS "libc_wrap.c")
 
-idf_component_register(SRCS "cardputer_doom.cpp" ${DOOM_SRCS} ${HAL_SRCS}
-                    INCLUDE_DIRS "." "./hal" "./doom/include")
+idf_component_register(SRCS "cardputer_doom.cpp" ${DOOM_SRCS} ${HAL_SRCS} ${FS_SRCS}
+                    INCLUDE_DIRS "." "./fs" "./hal" "./doom/include")
 
 
 
