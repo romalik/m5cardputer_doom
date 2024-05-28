@@ -356,6 +356,8 @@ float FAT_volumeCapacityKB(void);
 float FAT_volumeCapacityMB(void);
 float FAT_volumeCapacityGB(void);
 FRESULT FAT_getLabel(char* label, uint32_t* vol_sn);
+unsigned int FAT_get_cluster_size();
+unsigned int FAT_get_sectors_per_cluster();
 
 // Other
 uint8_t FAT_createTimeMilli(void);
@@ -406,6 +408,10 @@ bool FAT_attrIsHidden(FILE* finfo_p);
 bool FAT_attrIsSystem(FILE* finfo_p);
 bool FAT_attrIsReadOnly(FILE* finfo_p);
 bool FAT_attrIsArchive(FILE* finfo_p);
+
+
+uint8_t _FAT_nextFileCluster(FILE* file_p);
+
 
 uint8_t FAT_read_file_sector(FILE * file_p, unsigned int sector, char * buffer);
 

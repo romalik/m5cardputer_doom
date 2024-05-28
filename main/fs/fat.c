@@ -55,6 +55,8 @@ static FAT fat;							// card object
 //static FAT* fat = &fat_obj;
 
 
+
+
 /*************************************************************
 	FUNCTION PROTOTYPES
 **************************************************************/
@@ -79,7 +81,7 @@ static SECTSIZE_t _FAT_clusterToSector(CLSTSIZE_t cluster);
 static CLSTSIZE_t _FAT_tableReadSet(CLSTSIZE_t cluster, CLSTSIZE_t new_value, uint8_t task);
 static void _FAT_parse_long_names(char buff[], uint16_t sector_offset);
 static uint8_t _FAT_parse_long_names_(char buff[], uint8_t start_idx, uint16_t sector_offset, uint8_t buff_idx, uint8_t len);
-static uint8_t _FAT_nextFileCluster(FILE* file_p);
+
 
 
 /*************************************************************
@@ -1630,7 +1632,12 @@ void FAT_fseekEnd(FILE* fp){
 	FAT_fseek(fp, fp->file_size);
 }
 
-
+unsigned int FAT_get_cluster_size() {
+	return fat.BPB_BytsPerSec * fat.BPB_SecPerClus;
+}
+unsigned int FAT_get_sectors_per_cluster() {
+	return fat.BPB_SecPerClus;
+}
 /*______________________________________________________________________________________________
 	Move the file pointer x number of bytes. fptr must not be greater 
 	than the file size in bytes.
@@ -1821,7 +1828,7 @@ static void _FAT_removeChain(CLSTSIZE_t start_cluster){
 /*______________________________________________________________________________________________
 	Private: Returns next file cluster or EOF. Used by the file read/write functions.
 _______________________________________________________________________________________________*/
-static uint8_t _FAT_nextFileCluster(FILE* file_p){
+uint8_t _FAT_nextFileCluster(FILE* file_p){
 	if(file_p->file_active_cluster < 2) return 1; // cluster allocation must start from 2
 	
 	// Find next cluster of the file

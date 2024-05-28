@@ -190,7 +190,8 @@ build_check_stmt(location_t loc, tree base, tree len,
 
 
     tree tmp_ptr = make_ssa_name (ptr_type_node);
-    fprintf(stderr, "Tree code for tmp_ptr: %s\n", get_tree_code_name(TREE_CODE(tmp_ptr)));
+    
+    //fprintf(stderr, "Tree code for tmp_ptr: %s\n", get_tree_code_name(TREE_CODE(tmp_ptr)));
 
     gimple_call_set_lhs(g, tmp_ptr);
 
@@ -289,7 +290,7 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
 
         tree repr = DECL_BIT_FIELD_REPRESENTATIVE(TREE_OPERAND(t, 1));
-        fprintf(stderr, "repr size in bytes: %lu\n",int_size_in_bytes(TREE_TYPE(repr)));
+        //fprintf(stderr, "repr size in bytes: %lu\n",int_size_in_bytes(TREE_TYPE(repr)));
         instrument_derefs(iter, build3(COMPONENT_REF, TREE_TYPE(repr), TREE_OPERAND(t, 0), repr, TREE_OPERAND(t, 2)),
                           location, is_store, t);
         return;
@@ -388,7 +389,7 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
                 bitregion_end = bitpos + bitsize - 1;
             }
 
-            fprintf(stderr, "bitregion start %lu end %lu bitpos %ld bitsize %ld\n", bitregion_start.to_constant(), bitregion_end.to_constant(), bitpos.to_constant(), bitsize.to_constant());
+            //fprintf(stderr, "bitregion start %lu end %lu bitpos %ld bitsize %ld\n", bitregion_start.to_constant(), bitregion_end.to_constant(), bitpos.to_constant(), bitsize.to_constant());
 
 
             tree derefed_value = make_ssa_name (integer_type_node);
@@ -406,8 +407,8 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
             int shift_to_msb = (int_size_in_bytes(TREE_TYPE(lshifted_value))*8) - (bitpos_in_region + bitsize.to_constant());
 
-            fprintf(stderr, "target size_in_bytes %lu %lubits\n", int_size_in_bytes(TREE_TYPE(lshifted_value)), int_size_in_bytes(TREE_TYPE(lshifted_value))*8);
-            fprintf(stderr, "shift_to_msb %d\n", shift_to_msb);
+            //fprintf(stderr, "target size_in_bytes %lu %lubits\n", int_size_in_bytes(TREE_TYPE(lshifted_value)), int_size_in_bytes(TREE_TYPE(lshifted_value))*8);
+            //fprintf(stderr, "shift_to_msb %d\n", shift_to_msb);
 
             gimple * bitfield_adjust_lshift = gimple_build_assign   (   lshifted_value,
                                                                         LSHIFT_EXPR,  
@@ -422,7 +423,7 @@ instrument_derefs(gimple_stmt_iterator *iter, tree t,
 
 
             int shift_to_lsb = shift_to_msb + bitpos_in_region;
-            fprintf(stderr, "shift_to_lsb %d\n", shift_to_lsb);
+            //fprintf(stderr, "shift_to_lsb %d\n", shift_to_lsb);
 
             gimple * bitfield_adjust_rshift  = gimple_build_assign  (   rshifted_value,
                                                                         RSHIFT_EXPR,  
@@ -591,8 +592,8 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
     tree ref_expr = NULL_TREE;
     bool is_store, is_instrumented = false;
 
-    fprintf(stderr, "maybe_instrument_assignment\n");
-            {
+    //fprintf(stderr, "maybe_instrument_assignment\n");
+            if(0){
                 pretty_printer buffer;
                 pp_needs_newline (&buffer) = true;
                 buffer.buffer->stream = stderr;
@@ -611,7 +612,7 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
 
     if (gimple_assign_load_p (s))
     {
-        fprintf(stderr, "Have load!\n");
+        //fprintf(stderr, "Have load!\n");
         ref_expr = gimple_assign_rhs1 (s);
         is_store = false;
         instrument_derefs (iter, ref_expr,
@@ -620,7 +621,7 @@ maybe_instrument_assignment (gimple_stmt_iterator *iter)
         is_instrumented = true;
     }
 
-    fprintf(stderr, "maybe_instrument_assignment done\n");
+    //fprintf(stderr, "maybe_instrument_assignment done\n");
 /*
     if (is_instrumented)
         gsi_next (iter);
@@ -921,6 +922,7 @@ namespace
             // fun is the current function being called
             gimple_seq gimple_body = fun->gimple_body;
 
+/*
             std::cerr << "FUNCTION '" << function_name(fun)
                 << "' at " << LOCATION_FILE(fun->function_start_locus) << ":" << LOCATION_LINE(fun->function_start_locus) << "\n";
             std::cerr << "*******************\n";
@@ -930,7 +932,7 @@ namespace
             std::cerr << "*******************\n";
             
             std::cerr << "\n\nProcess:\n";
-
+*/
             {
                 FILE *file = stderr;
                 gimple_seq seq = gimple_body;
@@ -968,12 +970,12 @@ namespace
                 }
             }
 
-
+/*
             std::cerr << "\n\nAfter replace:\n\n";
 
             print_gimple_seq(stderr, fun->gimple_body, 0, static_cast<dump_flags_t>(0));
             std::cerr << "*******************\n\n";
-
+*/
             return 0;
         }
 
@@ -990,7 +992,7 @@ int plugin_init (struct plugin_name_args *plugin_info,
 {
 	// We check the current gcc loading this plugin against the gcc we used to
 	// created this plugin
-    std::cerr << "plugin version: " << version->basever << " gcc_version " << gcc_version.basever << "\n";
+    //std::cerr << "plugin version: " << version->basever << " gcc_version " << gcc_version.basever << "\n";
 	if (strncmp (version->basever, gcc_version.basever, 3))
     {
         std::cerr << "This GCC plugin is for version " << GCCPLUGIN_VERSION_MAJOR << "." << GCCPLUGIN_VERSION_MINOR << "\n";

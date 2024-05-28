@@ -14,6 +14,7 @@ file(GLOB_RECURSE HAL_SRCS
 )
 
 list(APPEND DOOM_SRCS "libc_wrap.c")
+list(APPEND DOOM_SRCS "mmap.c")
 
 idf_component_register(SRCS "cardputer_doom.cpp" ${DOOM_SRCS} ${HAL_SRCS} ${FS_SRCS}
                     INCLUDE_DIRS "." "./fs" "./hal" "./doom/include")
