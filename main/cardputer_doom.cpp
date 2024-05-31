@@ -19,14 +19,19 @@
 #include "hal/display/hal_display.hpp"
 #include "fat.h"
 
+
+
+
 unsigned short * __sprite_data;
 
 LGFX_Sprite * doom_canvas;
 
 bool scale = true;
 
-extern "C" void __update_sprite() {
+extern int new_frame;
 
+extern "C" void __update_sprite() {
+    new_frame = 1;
     if(scale) {
         doom_canvas->pushRotateZoom(240.0f/2.0f,135.0f/2.0f,0.0f,1.0f,(135.0f/160.0f));
     } else {
@@ -351,7 +356,7 @@ extern "C" void init_wad() {
 
     F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
     FAT_openDir(&dir, "/");
-    FAT_fopen(&dir, doom_wad_file, "gdoom2.wad");
+    FAT_fopen(&dir, doom_wad_file, "c_doom2.wad");
     doom_iwad_len = doom_wad_file->file_size;
 
     printf("WAD size: %d\n", doom_iwad_len);

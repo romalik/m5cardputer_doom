@@ -215,6 +215,7 @@ void* Z_Malloc(int size, int tag, void **user)
         {
             // scanned all the way around the list
             printf ("Z_Malloc: failed on allocation of %d bytes\n", size);
+                esp_backtrace_print(100);
             while(1) {}
         }
 
@@ -288,7 +289,7 @@ void* Z_Malloc(int size, int tag, void **user)
 
 
     printf("Alloc: %d (used %d/%d)\n", base->size, running_count,_z_heap_size);
-
+    //esp_backtrace_print(100);
 
     return (void *) ((byte *)base + sizeof(memblock_t));
 }

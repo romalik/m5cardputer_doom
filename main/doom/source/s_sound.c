@@ -322,6 +322,8 @@ void S_StartSoundAtVolume(void *origin_p, int sfx_id, int volume)
 void S_StartSound(void *origin, int sfx_id)
 {
   printf("S_StartSound(%p %d)\n", origin, sfx_id);
+  printf("Bail from S_StartSound()\n");
+  return;
   S_StartSoundAtVolume(origin, sfx_id, snd_SfxVolume);
 }
 

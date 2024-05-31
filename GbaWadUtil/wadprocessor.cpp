@@ -12,10 +12,15 @@ bool WadProcessor::ProcessWad()
 {
     //Figure out if our IWAD is Doom or Doom2. (E1M1 or MAP01)
 
+    RescaleSprites();
+    return true;
+
+
     Lump mapLump;
 
     RemoveUnusedLumps();
     ConvertMusicToMIDI();
+
 
     int lumpNum = wadFile.GetLumpByName("MAP01", mapLump);
 
@@ -493,6 +498,125 @@ bool WadProcessor::RemoveUnusedLumps()
         }
     }
     */
+    return true;
+}
+
+typedef struct image_header {
+    int16_t width;
+    int16_t height;
+    int16_t left_off;
+    int16_t top_off;
+} image_header_t;
+
+void rescale_sprite(Lump & lump) {
+    const char * data = lump.data.constData();
+    const image_header_t * header = reinterpret_cast<const image_header_t*>(data);
+
+    if(header->left_off < 0) {
+        //weapon sprite
+        return;
+    }
+    //printf("width %d height %d left_off %d top_off %d\n", header->width, header->height, header->left_off, header->top_off);
+    std::vector<uint32_t> column_ofs;
+    for(int i = 0; i<header->width; i++) {
+        column_ofs.push_back(
+            *reinterpret_cast<const uint32_t*>(data + sizeof(image_header_t) + i*sizeof(uint32_t))
+        );
+    }
+
+/*
+    printf("Offsets: ");
+    for(auto o : column_ofs) {
+        printf("%d ", o);
+    }
+    printf("\n");
+*/
+
+    char * new_data = (char*)malloc(lump.length);
+
+    char * n_p = new_data;
+
+
+    image_header_t new_header;
+    new_header.height = header->height/2;
+    new_header.width  = header->width/2;
+    new_header.left_off = header->left_off/2;
+    new_header.top_off  = header->top_off/2;
+
+    memcpy(new_data, (char *)&new_header, sizeof(image_header_t));
+
+    uint32_t * off_p = (uint32_t*)(new_data + sizeof(image_header_t));
+
+    n_p += sizeof(image_header_t) + new_header.width*sizeof(uint32_t);
+
+    for(size_t i = 0; i<column_ofs.size(); i+=2) {
+        //printf("column %d\n", i);
+        const unsigned char * c_col = (const unsigned char *)(data + column_ofs[i]);
+        const uint8_t * c_post = c_col;
+
+            *off_p = (uint32_t)(n_p - new_data);
+            off_p++;
+
+        while(*c_post != 0xff) {
+            uint8_t post_ofs = c_post[0];
+            uint8_t n_pixels = c_post[1];
+            // here goes dummy byte
+            const uint8_t * pixels = c_post + 3;
+            //here goes dummy_byte
+            c_post += 1 + 1 + 2 + n_pixels;
+            //printf("post ofs %d n_pixels %d\n", post_ofs, n_pixels);
+
+
+            *n_p = post_ofs/2; n_p++;
+            *n_p = n_pixels/2; n_p++;
+            *n_p = 0; n_p++; //dummy
+            for(size_t j = 0; j < n_pixels/2; j++) {
+                *n_p = pixels[j*2]; n_p++;
+            }
+            *n_p = 0; n_p++; //dummy
+        }
+        *n_p = 0xff;
+        n_p++;
+    }
+
+    lump.length = (n_p - new_data);
+    lump.data = QByteArray(new_data, lump.length);
+    
+}
+
+bool WadProcessor::RescaleSprites()
+{
+
+    int inside_sprite_section = 0;
+
+    for(quint32 i = 0; i < wadFile.LumpCount(); i++)
+    {
+        Lump l;
+
+        wadFile.GetLumpByNum(i, l);
+        
+        char name[9];
+        name[8] = 0;
+        memcpy(name, l.name.toLatin1().toUpper().constData(), 8);
+
+        //printf("%s\n", name);
+
+        if(!strncmp("S_START", name, 7))
+        {
+            inside_sprite_section = 1;
+            continue;
+        }
+
+        if(!strncmp("S_END", name, 5)) {
+            return true;
+        }
+
+        if(inside_sprite_section) {
+            printf("Sprite %s\n", name);
+            Lump & l_ref = wadFile.GetLumpRef(i);
+            rescale_sprite(l_ref);
+        }
+    }
     return true;
 }
 

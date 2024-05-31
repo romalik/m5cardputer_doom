@@ -103,6 +103,12 @@ bool WadFile::SaveWadFile(QIODevice* device)
 
         device->write(reinterpret_cast<const char*>(&fl), sizeof(fl));
 
+        char name[9];
+        name[8] = 0;
+        memcpy(name, fl.name, 8);
+
+        //printf("%08d (%08d) : %s\n", fl.filepos, fl.size, name);
+
         fileOffset += l.length;
         fileOffset = ROUND_UP4(fileOffset);
     }

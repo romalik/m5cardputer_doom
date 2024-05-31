@@ -14,7 +14,7 @@ extern unsigned int cluster_size;
 extern unsigned int sectors_per_cluster;
 extern unsigned int * start_sect_cache;
 
-#define MMAP_COLLECT_STATISTICS 1
+#define MMAP_COLLECT_STATISTICS 0
 #define MAX_MMAP_FILE_SIZE         16*1024*1024U
 
 #define MMAP_PAGE_CHUNK_SHIFT      9
@@ -22,24 +22,24 @@ extern unsigned int * start_sect_cache;
 #define MMAP_PAGE_POSITION_MASK    (MMAP_PAGE_SIZE-1)
 
 //#define MMAP_ARENA_N_PAGES (120000/MMAP_PAGE_SIZE)
-#define MMAP_ARENA_N_PAGES 10
+#define MMAP_ARENA_N_PAGES 210
 
 typedef struct mmap_page {
-    char data[MMAP_PAGE_SIZE];
-    //unsigned int next_ptr;
-    char file_id;
+    char * data;
     unsigned int chunk_idx; //merge file id and chunk idx
     unsigned int ttl;
+    char file_id;
+    unsigned char idx;
 } mmap_page_t;
 
 
 #if MMAP_COLLECT_STATISTICS
-#define N_PAGES (MAX_MMAP_FILE_SIZE/512)
-extern unsigned int page_statistics[];
+
 #endif
 
 
-extern mmap_page_t  mmap_arena[MMAP_ARENA_N_PAGES];
+extern mmap_page_t  mmap_pages[MMAP_ARENA_N_PAGES];
+extern char         mmap_arena[MMAP_ARENA_N_PAGES * MMAP_PAGE_SIZE];
 
 extern F_FILE * mmaped_files[16];
 
