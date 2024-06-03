@@ -1783,7 +1783,7 @@ static void R_DrawColumnInCache(const column_t* patch, byte* cache, int originy,
             count = cacheheight - position;
 
         if (count > 0)
-            ByteCopy(cache + position, source, count/2);
+            ByteCopy(cache + position/2, source, count/2);
 
         patch = (const column_t *)(  (const byte *)patch + patch->length/2 + 4);
     }
