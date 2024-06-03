@@ -125,7 +125,6 @@ static int PUREFUNC FindLumpByName(const char* name, const filelump_t** lump)
     const wadinfo_t* header;
     const filelump_t  *fileinfo;
 
-    
 
     if(doom_iwad_len > 0)
     {

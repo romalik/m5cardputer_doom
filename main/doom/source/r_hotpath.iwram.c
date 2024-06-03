@@ -542,7 +542,7 @@ inline static void R_DrawColumnPixel(unsigned short* dest, const byte* source, c
 #ifdef GBA
     *d = colormap[source[frac>>COLBITS]];
 #else
-    unsigned int color = colormap[source[frac>>COLBITS]];
+    unsigned int color = colormap[source[(frac>>COLBITS)/2]];
 
     *d = (color | (color << 8));
 #endif
@@ -550,6 +550,7 @@ inline static void R_DrawColumnPixel(unsigned short* dest, const byte* source, c
 
 static void R_DrawColumn (const draw_column_vars_t *dcvars)
 {
+
     int count = (dcvars->yh - dcvars->yl) + 1;
 
     // Zero length, column does not exceed a pixel.
@@ -652,7 +653,7 @@ static void R_DrawColumnHiRes(const draw_column_vars_t *dcvars)
     while(count--)
     {
         unsigned int old = *dest;
-        unsigned int color = colormap[source[frac>>COLBITS]];
+        unsigned int color = colormap[source[(frac>>COLBITS)/2]];
 
         *dest = ((old & mask) | (color << shift));
 
@@ -767,7 +768,7 @@ static void R_DrawMaskedColumn(R_DrawColumn_f colfunc, draw_column_vars_t *dcvar
             colfunc (dcvars);
         }
 
-        column = (const column_t *)((const byte *)column + column->length + 4);
+        column = (const column_t *)((const byte *)column + column->length/2 + 4);
     }
 
     dcvars->texturemid = basetexturemid;
@@ -809,6 +810,8 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     frac = vis->startfrac;
 
     spryscale = vis->scale;
+    //multiply scale factor 2
+    //spryscale = FixedDiv(spryscale, 2<<FRACBITS);
     sprtopscreen = centeryfrac - FixedMul(dcvars.texturemid, spryscale);
 
 
@@ -824,7 +827,7 @@ static void R_DrawVisSprite(const vissprite_t *vis)
 
     while(dcvars.x < SCREENWIDTH)
     {
-        const column_t* column = (const column_t *) ((const byte *)patch + patch->columnofs[frac >> FRACBITS]);
+        const column_t* column = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)/2]);
         R_DrawMaskedColumn(colfunc, &dcvars, column);
 
         frac += xiscale;
@@ -841,7 +844,7 @@ static void R_DrawVisSprite(const vissprite_t *vis)
             break;
 
 
-        const column_t* column2 = (const column_t *) ((const byte *)patch + patch->columnofs[frac >> FRACBITS]);
+        const column_t* column2 = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)/2]);
         R_DrawMaskedColumn(colfunc, &dcvars, column2);
 
         frac += xiscale;
@@ -866,7 +869,7 @@ static const column_t* R_GetColumn(const texture_t* texture, int texcolumn)
         //simple texture.
         const patch_t* patch = texture->patches[0].patch;
 
-        return (const column_t *) ((const byte *)patch + patch->columnofs[xc]);
+        return (const column_t *) ((const byte *)patch + patch->columnofs[xc/2]);
     }
     else
     {
@@ -886,7 +889,7 @@ static const column_t* R_GetColumn(const texture_t* texture, int texcolumn)
             const int x2 = x1 + realpatch->width;
 
             if(xc < x2)
-                return (const column_t *)((const byte *)realpatch + realpatch->columnofs[xc-x1]);
+                return (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)/2]);
 
         } while(++i < patchcount);
     }
@@ -1283,7 +1286,7 @@ inline static void R_DrawSpanPixel(unsigned short* dest, const byte* source, con
 #ifdef GBA
     *d = colormap[source[((position >> 4) & 0x0fc0) | (position >> 26)]];
 #else
-    unsigned int color = colormap[source[((position >> 4) & 0x0fc0) | (position >> 26)]];
+    unsigned int color = colormap[source[(( ((position >> 4) & 0x0fc0) / 2) | ( (position >> 26) / 2 ))]];
 
     *d = (color | (color << 8));
 #endif
@@ -1424,7 +1427,7 @@ static void R_DoDrawPlane(visplane_t *pl)
                 {
                     int xc = ((viewangle + xtoviewangle[x]) >> ANGLETOSKYSHIFT);
 
-                    const column_t* column = R_GetColumn(tex, xc);
+                    const column_t* column = R_GetColumn(tex, xc/2);
 
                     dcvars.source = (const byte*)column + 3;
                     R_DrawColumn(&dcvars);
@@ -1780,9 +1783,9 @@ static void R_DrawColumnInCache(const column_t* patch, byte* cache, int originy,
             count = cacheheight - position;
 
         if (count > 0)
-            ByteCopy(cache + position, source, count);
+            ByteCopy(cache + position, source, count/2);
 
-        patch = (const column_t *)(  (const byte *)patch + patch->length + 4);
+        patch = (const column_t *)(  (const byte *)patch + patch->length/2 + 4);
     }
 }
 
@@ -1892,7 +1895,7 @@ static const byte* R_ComposeColumn(const unsigned int texture, const texture_t* 
 
             if(xc < x2)
             {
-                const column_t* patchcol = (const column_t *)((const byte *)realpatch + realpatch->columnofs[xc-x1]);
+                const column_t* patchcol = (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)/2]);
 
                 R_DrawColumnInCache (patchcol,
                                      tmpCache,
@@ -1904,7 +1907,7 @@ static const byte* R_ComposeColumn(const unsigned int texture, const texture_t* 
         } while(++i < patchcount);
 
         //Block copy will drop low 2 bits of len.
-        BlockCopy(colcache, tmpCache, (tex->height + 3));
+        BlockCopy(colcache, tmpCache, (tex->height/2 + 3));
     }
 
     return colcache;
@@ -2950,7 +2953,7 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
 
     for (unsigned int col = 0; col < width; col++, desttop++)
     {
-        const column_t* column = (const column_t*)((const byte*)patch + patch->columnofs[col]);
+        const column_t* column = (const column_t*)((const byte*)patch + patch->columnofs[col/2]);
 
         unsigned int odd_addr = (size_t)desttop & 1;
 
@@ -2966,7 +2969,8 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
 
             while (count--)
             {
-                unsigned int color = *source++;
+                unsigned int color = *source;
+                if(count & 0x01) source++;
                 volatile unsigned short* dest16 = (volatile unsigned short*)dest;
 
                 unsigned int old = *dest16;
@@ -2980,7 +2984,7 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
                 dest += 240;
             }
 
-            column = (const column_t*)((const byte*)column + column->length + 4);
+            column = (const column_t*)((const byte*)column + column->length/2 + 4);
         }
     }
 }

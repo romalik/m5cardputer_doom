@@ -27,7 +27,7 @@ private:
     bool ProcessPNames();
     bool RemoveUnusedLumps();
     bool ConvertMusicToMIDI();
-    bool RescaleSprites();
+    bool RescaleImages();
 
     int GetTextureNumForName(const char* tex_name);
     WadFile& wadFile;

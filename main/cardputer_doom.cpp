@@ -29,9 +29,11 @@ LGFX_Sprite * doom_canvas;
 bool scale = true;
 
 extern int new_frame;
+extern int frame_n;
 
 extern "C" void __update_sprite() {
     new_frame = 1;
+    frame_n++;
     if(scale) {
         doom_canvas->pushRotateZoom(240.0f/2.0f,135.0f/2.0f,0.0f,1.0f,(135.0f/160.0f));
     } else {
@@ -348,15 +350,15 @@ extern "C" void init_wad() {
     printf("call mmap_test with ptr %p\n", mmaped_file);
     mmap_test(mmaped_file);
 */
-#if 0
+#if 1
     doom_iwad = (unsigned char*)doom_iwad_builtin;
-    doom_iwad_len = 4676420UL;
+    doom_iwad_len = sizeof(doom_iwad_builtin);
 #else
     DIR dir;
 
     F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
     FAT_openDir(&dir, "/");
-    FAT_fopen(&dir, doom_wad_file, "c_doom2.wad");
+    FAT_fopen(&dir, doom_wad_file, "gdoom2.wad");
     doom_iwad_len = doom_wad_file->file_size;
 
     printf("WAD size: %d\n", doom_iwad_len);

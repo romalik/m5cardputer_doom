@@ -15,8 +15,9 @@ unsigned int * start_sect_cache = NULL;
 
 
 #if MMAP_COLLECT_STATISTICS
-#define N_PAGE_LOG 500
-unsigned int swapped_page_n[N_PAGE_LOG];
+#define N_PAGE_LOG 1000
+unsigned int page_log[N_PAGE_LOG];
+unsigned int page_log_sz = 0;
 #endif
 
 
@@ -42,19 +43,27 @@ void my_mmap_init() {
     }
 
 #if MMAP_COLLECT_STATISTICS
-    memset(swapped_page_n, 0xff, N_PAGE_LOG * sizeof(unsigned int));
+    memset(page_log, 0, N_PAGE_LOG * sizeof(unsigned int));
+    page_log_sz = 0;
 #endif
 
 }
 
 #if MMAP_COLLECT_STATISTICS
 void add_page_to_list(unsigned int page) {
-    for(int i = 0; i<N_PAGE_LOG; i++) {
-        if(swapped_page_n[i] == 0xffffffff) {
-            swapped_page_n[i] = page;
-            return;
+
+    if(page_log_sz<N_PAGE_LOG) {
+        page_log[page_log_sz] = page;
+        page_log_sz+=2;
+    }
+}
+int find_page_in_log(unsigned int page) {
+    for(int i = 0; i<N_PAGE_LOG; i+=2) {
+        if(page_log[i] == page) {
+            return i;
         }
     }
+    return -1;
 }
 #endif
 
@@ -170,9 +179,7 @@ unsigned int get_ptr_to_buffer(void * ptr) {
         //printf("-> [%d](%d)\n", page - mmap_arena, page->chunk_idx);
         //printf("get_ptr_to_buffer() swapout %d\n", p_idx);
         swap_in_page(page, file_id, chunk_idx, offset);
-#if MMAP_COLLECT_STATISTICS
-        add_page_to_list(chunk_idx);
-#endif
+
         //printf("<- [%d](%d)\n", page - mmap_arena, page->chunk_idx);
     }
     //printf("get_ptr_to_buffer() -> %lu\n", (unsigned int)(page->data) + (offset & MMAP_PAGE_POSITION_MASK));
@@ -182,6 +189,7 @@ unsigned int get_ptr_to_buffer(void * ptr) {
 
 int new_frame = 0;
 
+int frame_n = 0;
 
 int avg_remap = 0;
 int max_remap = 0;
@@ -191,13 +199,14 @@ int n_fast = 0;
 
 int n_remap   = 0;
 
+unsigned int read_chunk_idx = 0;
+
 #define MMAP_PAGE_POSITION_MASK_INV (~MMAP_PAGE_POSITION_MASK)
 
 unsigned int prev_ptr = 0;
 unsigned int prev_result = 0;
 
 void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int align) {
-    //return ptr;
     //printf("__remap_ptr check\n");
     if(((unsigned int)ptr & 0x80000000)) {
         unsigned int val;
@@ -210,6 +219,7 @@ void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int ali
             n_fast++;
         } else {
             val = get_ptr_to_buffer(ptr);
+            read_chunk_idx = ((unsigned int)ptr & 0x00ffffff) >> MMAP_PAGE_CHUNK_SHIFT;
         }
         prev_ptr = (unsigned int)ptr;
         prev_result = val;
@@ -229,11 +239,24 @@ void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int ali
             min_remap = remap_time;
         }
 
-        if(n_remap == 100000 || new_frame) {
-            printf("Remap stats: avg %d min %d max %d n_swaps %d n_fast %d n %d\nSwapped pages: ", avg_remap, min_remap, max_remap, n_swaps, n_fast, n_remap);
-            for(int i = 0; i<N_PAGE_LOG; i++) {
-                if(swapped_page_n[i] == 0xffffffff) break;
-                printf("%u ", swapped_page_n[i]);
+        static int log_idx = 0;
+        if(page_log[log_idx] != read_chunk_idx) {
+            log_idx = find_page_in_log(read_chunk_idx);
+        }
+
+        if(log_idx >= 0) {
+            page_log[log_idx + 1]++;
+        } else {
+            log_idx = page_log_sz;
+            add_page_to_list(read_chunk_idx);
+            page_log[page_log_sz - 1] = 1;
+        }
+
+        if(page_log_sz == N_PAGE_LOG || new_frame) {
+            printf("Frame %d Remap stats: avg %d min %d max %d n_swaps %d n_fast %d n %d\n", frame_n, avg_remap, min_remap, max_remap, n_swaps, n_fast, n_remap);
+            printf("ACCESS_AT %d ", frame_n);
+            for(int i = 0; i<page_log_sz; i++) {
+                printf("%u ", page_log[i]);
             }
             printf("\n");
             n_remap = 0;
@@ -244,7 +267,8 @@ void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int ali
             n_fast = 0;
             new_frame = 0;
 
-            memset(swapped_page_n, 0xff, N_PAGE_LOG * sizeof(unsigned int));
+            page_log_sz = 0;
+            memset(page_log, 0, N_PAGE_LOG * sizeof(unsigned int));
         }
 #endif
 

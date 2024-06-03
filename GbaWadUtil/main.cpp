@@ -78,7 +78,7 @@ void SaveBytesAsCFile(QByteArray& bytes, QString file)
     if(!f.open(QIODevice::Truncate | QIODevice::ReadWrite))
         return;
 
-    QString decl = QString("const unsigned char doom_iwad[%1UL] = {\n").arg(bytes.size());
+    QString decl = QString("unsigned char * doom_iwad;\nconst unsigned char doom_iwad_builtin[%1UL] = {\n").arg(bytes.size());
 
     f.write(decl.toLatin1());
 
