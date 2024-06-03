@@ -350,7 +350,7 @@ extern "C" void init_wad() {
     printf("call mmap_test with ptr %p\n", mmaped_file);
     mmap_test(mmaped_file);
 */
-#if 1
+#if 0
     doom_iwad = (unsigned char*)doom_iwad_builtin;
     doom_iwad_len = sizeof(doom_iwad_builtin);
 #else

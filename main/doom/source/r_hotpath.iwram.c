@@ -965,7 +965,7 @@ static void R_RenderMaskedSegRange(const drawseg_t *ds, int x1, int x2)
     // draw the columns
     for (dcvars.x = x1 ; dcvars.x <= x2 ; dcvars.x++, spryscale += rw_scalestep)
     {
-        const int xc = maskedtexturecol[dcvars.x];
+        const int xc = maskedtexturecol[dcvars.x/2];
 
         if (xc != SHRT_MAX) // dropoff overflow
         {
@@ -978,7 +978,7 @@ static void R_RenderMaskedSegRange(const drawseg_t *ds, int x1, int x2)
 
             R_DrawMaskedColumn(R_DrawColumn, &dcvars, column);
 
-            maskedtexturecol[dcvars.x] = SHRT_MAX; // dropoff overflow
+            maskedtexturecol[dcvars.x/2] = SHRT_MAX; // dropoff overflow
         }
     }
 
@@ -1286,7 +1286,8 @@ inline static void R_DrawSpanPixel(unsigned short* dest, const byte* source, con
 #ifdef GBA
     *d = colormap[source[((position >> 4) & 0x0fc0) | (position >> 26)]];
 #else
-    unsigned int color = colormap[source[(( ((position >> 4) & 0x0fc0) / 2) | ( (position >> 26) / 2 ))]];
+                                                                    // >> 2 because /2 to scale width + >>1 to fit 5-bit height
+    unsigned int color = colormap[source[(( ((position >> 4) & 0x0fc0) >> 2) | ( (position >> 26) / 2 ))]];
 
     *d = (color | (color << 8));
 #endif

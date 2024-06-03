@@ -595,6 +595,12 @@ void rescale_sprite(Lump & lump) {
             *n_p = post_ofs; n_p++;
             *n_p = n_pixels; n_p++;
             *n_p = 0; n_p++; //dummy
+            /*
+            int n_new_pixels = n_pixels/2;
+            if(n_pixels == 1) {
+                n_new_pixels = 1;
+            }
+            */
             for(size_t j = 0; j < n_pixels/2; j++) {
                 *n_p = pixels[j*2]; n_p++;
             }
@@ -636,6 +642,7 @@ char * hud_stuff[] = {
 "STFDEAD0",
 "STCFN",
 "STTNUM",
+"STRSNUM",
 NULL
 };
 
