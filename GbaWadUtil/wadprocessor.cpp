@@ -12,7 +12,7 @@ bool WadProcessor::ProcessWad()
 {
     //Figure out if our IWAD is Doom or Doom2. (E1M1 or MAP01)
 
-    RescaleImages();
+    //RescaleImages();
     //return true;
 
 
