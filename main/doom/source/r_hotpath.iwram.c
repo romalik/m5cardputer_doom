@@ -3029,7 +3029,11 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
             while (count--)
             {
                 unsigned int color = *source;
+#if DO_RESCALE
                 if(count & 0x01) source++;
+#else
+                source++;
+#endif
                 volatile unsigned short* dest16 = (volatile unsigned short*)dest;
 
                 unsigned int old = *dest16;

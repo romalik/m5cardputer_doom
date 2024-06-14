@@ -335,21 +335,12 @@ extern "C" void cache_clusters(F_FILE * file) {
 }
 
 
-extern "C" void init_wad() {
+extern "C" void init_and_maybe_rebuild_cache(char * wad_path);
+
+extern "C" void init_wad(char * wad_path) {
     my_mmap_init();
 
 
-    //listdir("/sd", 0);
-
-/*
-    FILE * file = fopen("/sd/big_file", "r");
-    char * mmaped_file = my_mmap(file, 0, 1000);
-
-    printf("call mmap_test with ptr %p\n", test_string);
-    mmap_test(test_string);
-    printf("call mmap_test with ptr %p\n", mmaped_file);
-    mmap_test(mmaped_file);
-*/
 #if 0
     doom_iwad = (unsigned char*)doom_iwad_builtin;
     doom_iwad_len = sizeof(doom_iwad_builtin);
@@ -358,7 +349,7 @@ extern "C" void init_wad() {
 
     F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
     FAT_openDir(&dir, "/");
-    FAT_fopen(&dir, doom_wad_file, "gdoom2.wad");
+    FAT_fopen(&dir, doom_wad_file, wad_path);
     doom_iwad_len = doom_wad_file->file_size;
 
     printf("WAD size: %d\n", doom_iwad_len);
@@ -367,6 +358,9 @@ extern "C" void init_wad() {
     //rewind(doom_wad_file);
 
     doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
+
+    init_and_maybe_rebuild_cache(wad_path);
+
 #endif
 }
 
@@ -388,6 +382,9 @@ void memcheck(char * tag) {
 extern "C" void app_main(void)
 {
 
+
+
+
     printf("MMAP_PAGE_SIZE: %lu\n", MMAP_PAGE_SIZE);
     memcheck("Start");
     printf("Init SD\n");
@@ -397,8 +394,12 @@ extern "C" void app_main(void)
     delay(500);
     memcheck("SD Init");
 
-    init_wad();
+    init_wad("gdoom2.wad");
+
     memcheck("WAD Init");
+
+
+
     //mkdir("/sd/doom", 0775);
     kb_init(kb_output_list, kb_input_list);
     memcheck("KB Init");
@@ -418,20 +419,6 @@ extern "C" void app_main(void)
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
 
 
-
-/*
-    printf("List root:\n");
-
-    listdir("/sd", 0);
-*/
-
-/*
-    printf("Write file\n");
-    FILE * f = fopen("/sd/testfile", "w");
-    fwrite("test text", 10, 1, f);
-    fclose(f);
-    listdir("/sd", 0);
-*/
     printf("Launch DOOM\n");
     doom_main(0,0);
 

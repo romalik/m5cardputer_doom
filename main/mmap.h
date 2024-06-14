@@ -33,13 +33,25 @@ typedef struct mmap_page {
 } mmap_page_t;
 
 
+#define STATIC_CACHE_REGIONS_SIZE 4
+//expected to be 512 page aligned
+typedef struct static_cache_region {
+    char * reg_begin;
+    char * reg_end;
+    char * data;
+} static_cache_region_t;
+
+
+
+
 #if MMAP_COLLECT_STATISTICS
 
 #endif
 
 
-extern mmap_page_t  mmap_pages[MMAP_ARENA_N_PAGES];
-extern char         mmap_arena[MMAP_ARENA_N_PAGES * MMAP_PAGE_SIZE];
+extern static_cache_region_t    static_cache[STATIC_CACHE_REGIONS_SIZE];
+extern mmap_page_t              mmap_pages[MMAP_ARENA_N_PAGES];
+extern char                     mmap_arena[MMAP_ARENA_N_PAGES * MMAP_PAGE_SIZE];
 
 extern F_FILE * mmaped_files[16];
 
@@ -49,6 +61,7 @@ char * my_mmap(F_FILE * fd);
 
 void my_unmmap(FILE * fd);
 
+static_cache_region_t * register_static_cache_region(char * reg_begin, char * reg_end, char * data);
 
 mmap_page_t * get_mmap_page_for_id_and_offset(int id, unsigned int chunk_idx);
 

@@ -27,11 +27,16 @@ def read_log(fname):
     file_lines = file.readlines()
     file.close()
 
+    counter = 0
     
     for line in file_lines:
         if line.startswith("ACCESS_AT"):
             vals = line.split()
             refs_by_frame[int(vals[1])] = list(map(int, vals[2:]))
+            counter = counter + 1
+        
+
+    print("Read " + str(counter) + " lines" )
 
     
 
@@ -92,6 +97,7 @@ def plot_log():
         ax.set_ylim([0, max_nref])
 
         plot_frame(ax, frame)
+        plt.title(str(frame) + '/' + str(len(refs_by_frame)))
         fig.canvas.draw_idle()
 
     next_button.on_clicked(next_button_on_clicked)
@@ -108,10 +114,12 @@ def plot_log():
         ax.set_ylim([0, max_nref])
 
         plot_frame(ax, frame)
+        plt.title(str(frame) + '/' + str(len(refs_by_frame)))
         fig.canvas.draw_idle()
 
     prev_button.on_clicked(prev_button_on_clicked)
 
+    
 
     plt.show()
 

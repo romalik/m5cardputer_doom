@@ -21,8 +21,10 @@ unsigned int page_log_sz = 0;
 #endif
 
 
-mmap_page_t  mmap_pages[MMAP_ARENA_N_PAGES];
-char         mmap_arena[MMAP_ARENA_N_PAGES * MMAP_PAGE_SIZE] __attribute__((aligned(MMAP_PAGE_SIZE)));
+
+static_cache_region_t   static_cache[STATIC_CACHE_REGIONS_SIZE];
+mmap_page_t             mmap_pages[MMAP_ARENA_N_PAGES];
+char                    mmap_arena[MMAP_ARENA_N_PAGES * MMAP_PAGE_SIZE] __attribute__((aligned(MMAP_PAGE_SIZE)));
 
 F_FILE * mmaped_files[16] = {NULL};
 
@@ -41,6 +43,8 @@ void my_mmap_init() {
         mmap_pages[i].idx = i;
         //printf("mmap_arena[%d]: %p\n", i, &mmap_arena[i]);
     }
+
+    memset(static_cache, 0, sizeof(static_cache_region_t) * STATIC_CACHE_REGIONS_SIZE);
 
 #if MMAP_COLLECT_STATISTICS
     memset(page_log, 0, N_PAGE_LOG * sizeof(unsigned int));
@@ -67,6 +71,19 @@ int find_page_in_log(unsigned int page) {
 }
 #endif
 
+static_cache_region_t * register_static_cache_region(char * reg_begin, char * reg_end, char * data) {
+    for(int i = 0; i<STATIC_CACHE_REGIONS_SIZE; i++) {
+        if(!static_cache[i].reg_begin) {
+            static_cache[i].reg_begin = reg_begin;
+            static_cache[i].reg_end = reg_end;
+            static_cache[i].data = data;
+            return &static_cache[i];
+        }
+    }
+    printf("Static cache region overflow!\n");
+    abort();
+    return NULL;
+}
 
 char * my_mmap(F_FILE * fd) {
     char * retval = NULL;
@@ -160,7 +177,25 @@ void dump_statistics() {
 
 int n_swaps = 0;
 
+void * find_ptr_in_static_cache(void *ptr) {
+    for(int i = 0; i<STATIC_CACHE_REGIONS_SIZE; i++) {
+        if(ptr >= static_cache[i].reg_begin && ptr < static_cache[i].reg_end) {
+            return static_cache[i].data + ((char *)ptr - static_cache[i].reg_begin);
+        }
+    }
+    return NULL;
+}
+
+
 unsigned int get_ptr_to_buffer(void * ptr) {
+    //first search static cache
+    void * cached_ptr;
+    if(cached_ptr = find_ptr_in_static_cache(ptr)) {
+        return (unsigned int)cached_ptr;
+    }
+
+    //else - search through mmaped pages
+
     int file_id = (((unsigned int)ptr & 0x0f000000) >> (8*3));
     unsigned int offset = (unsigned int)ptr & 0x00ffffff;
     unsigned int chunk_idx = offset >> MMAP_PAGE_CHUNK_SHIFT;
