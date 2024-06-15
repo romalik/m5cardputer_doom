@@ -40,18 +40,18 @@ static const c_cheat cheat_def[] =
     {"God mode",        CHEAT_SEQ('d','q','d','d','i',0,0,0), cheat_god},
     {"Ammo & Keys",     CHEAT_SEQ('a','f','k','d','i',0,0,0), cheat_idkfa},
     {"Ammo & Keys",     CHEAT_SEQ(0,0,'c','d','i',0,0,0),     cheat_idc},
-    {"Ammo",            CHEAT_SEQ(KEYD_R,   KEYD_R,     KEYD_SELECT,KEYD_R,     KEYD_SELECT,KEYD_UP,        KEYD_UP,        KEYD_LEFT),     cheat_ammo},
-    {"No Clipping",     CHEAT_SEQ(KEYD_UP,  KEYD_DOWN,  KEYD_LEFT,  KEYD_RIGHT, KEYD_UP,    KEYD_DOWN,      KEYD_LEFT,      KEYD_RIGHT),    cheat_noclip},
+    {"Ammo",            CHEAT_SEQ('a','f','d','i',0,0,0,0),   cheat_ammo},
+    {"No Clipping",     CHEAT_SEQ('p','i','l','c','d','i',0,0),    cheat_noclip},
     {"Invincibility",   CHEAT_SEQ(KEYD_A,   KEYD_B,     KEYD_L,     KEYD_R,     KEYD_L,     KEYD_R,         KEYD_SELECT,    KEYD_SELECT),   cheat_invincibility},
     {"Berserk",         CHEAT_SEQ(KEYD_B,   KEYD_B,     KEYD_R,     KEYD_UP,    KEYD_A,     KEYD_A,         KEYD_R,         KEYD_B),        cheat_beserk},
     {"Invisibility",    CHEAT_SEQ(KEYD_A,   KEYD_A,     KEYD_SELECT,KEYD_B,     KEYD_A,     KEYD_SELECT,    KEYD_L,         KEYD_B),        cheat_invisibility},
     {"Auto-map",        CHEAT_SEQ(KEYD_L,   KEYD_SELECT,KEYD_R,     KEYD_B,     KEYD_A,     KEYD_R,         KEYD_L,         KEYD_UP),       cheat_map},
     {"Lite-Amp Goggles",CHEAT_SEQ(KEYD_DOWN,KEYD_LEFT,  KEYD_R,     KEYD_LEFT,  KEYD_R,     KEYD_L,         KEYD_L,         KEYD_SELECT),   cheat_goggles},
-    {"Exit Level",      CHEAT_SEQ(KEYD_LEFT,KEYD_R,     KEYD_LEFT,  KEYD_L,     KEYD_B,     KEYD_LEFT,      KEYD_RIGHT,     KEYD_A),        cheat_exit},
+    {"Exit Level",      CHEAT_SEQ('t','i','x','e','d','i',0,0),        cheat_exit},
 
     //Because Goldeneye!
     {"Enemy Rockets",   CHEAT_SEQ(KEYD_A,   KEYD_B,     KEYD_L,     KEYD_R,     KEYD_R,     KEYD_L,         KEYD_B,         KEYD_A),        cheat_rockets},
-	{"FPS Counter Ammo",CHEAT_SEQ(KEYD_A,   KEYD_B,     KEYD_L,     KEYD_UP,    KEYD_DOWN,  KEYD_B,         KEYD_LEFT,     KEYD_LEFT),      cheat_fps},
+	{"FPS Counter Ammo",CHEAT_SEQ('s','p','f','d','i',0,0,0),      cheat_fps},
 };
 
 static const unsigned int num_cheats = sizeof(cheat_def) / sizeof (c_cheat);
@@ -256,7 +256,7 @@ static void cheat_idc()
 
     if (_g->gamemode == commercial)
     {
-        epsd = 0;
+        epsd = 1;
         map = (_g->cheat_buffer[1] - '0')*10 + _g->cheat_buffer[0] - '0';
     }
     else

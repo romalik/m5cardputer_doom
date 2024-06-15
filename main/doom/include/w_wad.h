@@ -76,4 +76,8 @@ const void* PUREFUNC W_CacheLumpNum (int lump);
 
 void ExtractFileBase(const char *, char *);       // killough
 
+
+
+const filelump_t* PUREFUNC FindLumpByNum(int num);
+
 #endif

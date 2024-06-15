@@ -127,17 +127,26 @@ static void STlib_drawNum
 
   //jff 2/16/98 add color translation to digit output
   // in the special case of 0, you draw 0
-  if (!num)
+  if (!num) {
     // CPhipps - patch drawing updated, reformatted
+#ifdef D_SUPPRESS_HUD    
+    printf("Print NONE at %d %d\n", x-w, n->y);
+#else
     V_DrawPatchNoScale(x - w, n->y, n->p[0]);
-
+#endif
+  }
   // draw the new number
   //jff 2/16/98 add color translation to digit output
   while (num && numdigits--)
   {
     // CPhipps - patch drawing updated, reformatted
     x -= w;
+#ifdef D_SUPPRESS_HUD
+    printf("Print %d at %d %d\n", num%10, x, n->y);
+#else
     V_DrawPatchNoScale(x, n->y, n->p[num % 10]);
+#endif
+
     num /= 10;
   }
 }
@@ -246,7 +255,12 @@ void STlib_updateMultIcon
         return;
 
     if (*mi->inum != -1)  // killough 2/16/98: redraw only if != -1
+
+#ifdef D_SUPPRESS_HUD
+    printf("Draw icon at %d %d\n",mi->x, mi->y);
+#else
 		V_DrawPatchNoScale(mi->x, mi->y, mi->p[*mi->inum]);
+#endif
 
     mi->oldinum = *mi->inum;
 
@@ -297,8 +311,13 @@ void STlib_updateBinIcon
 {
     if (*bi->on && (bi->oldval != *bi->val || refresh))
     {
-        if (*bi->val)
+        if (*bi->val) {
+#ifdef D_SUPPRESS_HUD          
+            printf("Draw bin icon at %d %d\n", bi->x, bi->y);
+#else
             V_DrawPatch(bi->x, bi->y, ST_FG, bi->p);
+#endif
+        }
 
         bi->oldval = *bi->val;
     }

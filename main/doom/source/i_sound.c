@@ -78,7 +78,7 @@ bool audioStarted = false;
 #define SAMPLESIZE		2   	// 16bit
 
 int snd_card = 1;
-int mus_card = 1;
+int mus_card = 0;
 int snd_samplerate = 11025;
 
 int channelsOut = 1;
@@ -129,6 +129,7 @@ int		channelids[NUM_MIX_CHANNELS];
 // This function loads the sound data from the WAD lump,
 //  for single sound.
 //
+
 void* getsfx(char* sfxname, int* len)
 {
     unsigned char*      sfx;
@@ -391,6 +392,11 @@ int I_AnySoundStillPlaying(void)
 //
 // This function currently supports only 16bit.
 //
+
+extern void * find_ptr_in_static_cache(void *ptr);
+
+__attribute__((no_instrument_function)) void IRAM_ATTR I_UpdateSound( void );
+
 void IRAM_ATTR I_UpdateSound( void )
 {
   // Mix current sound data.
@@ -434,7 +440,18 @@ void IRAM_ATTR I_UpdateSound( void )
           if (channels[ chan ])
           {
             // Get the raw data from the channel. 
-            sample = *channels[ chan ];
+
+
+            //sample = *channels[ chan ];
+
+            unsigned char * sample_ptr = (unsigned char *)find_ptr_in_static_cache(channels[ chan ]);
+            if(sample_ptr) {
+              sample = *sample_ptr;
+            } else {
+              sample = 0;
+            }
+
+
             // Add left and right part
             //  for this channel (sound)
             //  to the current data.
@@ -496,19 +513,28 @@ void I_ShutdownSound(void)
 
 extern void __play_sound(unsigned char * buf, unsigned int size);
 
+
+__attribute__((no_instrument_function)) void IRAM_ATTR updateTask(void *arg);
 void IRAM_ATTR updateTask(void *arg) 
 {
+  //printf("i_sound.c : updateTask()\n");
   size_t bytesWritten;
   while(1)
   {
     //xSemaphoreTake(dmaChannel2Sem, portMAX_DELAY);
+    
+    
     I_UpdateSound();
+  
+  
     //printf("sound: updateTask()\n");
     //for(int i = 0; i<SAMPLECOUNT*SAMPLESIZE; i++) {
     //  printf("%d ", mixbuffer[i]);
     //}
     //printf("\n");
-    i2s_write(I2S_NUM_1, mixbuffer, SAMPLECOUNT*SAMPLESIZE, &bytesWritten, portMAX_DELAY);
+    
+    i2s_write(I2S_NUM_0, mixbuffer, SAMPLECOUNT*SAMPLESIZE, &bytesWritten, portMAX_DELAY);
+    
     //__play_sound(mixbuffer, SAMPLECOUNT*SAMPLESIZE);
     //xSemaphoreGive(dmaChannel2Sem);
   }
@@ -518,9 +544,40 @@ void IRAM_ATTR updateTask(void *arg)
 #define I2S_MODE_DAC_BUILT_IN  (0x1 << 4)
 void I_InitSound(void)
 {
+#if 0
+  //debug minimal
+  mixbuffer = malloc(MIXBUFFERSIZE*sizeof(unsigned char));
+  static const i2s_config_t i2s_config = {
+    .mode = I2S_MODE_MASTER | I2S_MODE_TX/*I2S_MODE_PDM, I2S_MODE_DAC_BUILT_IN*/,
+    .sample_rate = SAMPLERATE,
+    .bits_per_sample = SAMPLESIZE*8, /* the DAC module will only take the 8bits from MSB */
+    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+    .intr_alloc_flags = 0, // default interrupt priority
+    .dma_buf_count = 4,
+    .dma_buf_len = 64,
+    .use_apll = false
+  };
+  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);   //install and start i2s driver
+  i2s_pin_config_t pin_cfg;
+  pin_cfg.bck_io_num = 41;
+  pin_cfg.data_in_num = -1;
+  pin_cfg.data_out_num = 42;
+  pin_cfg.mck_io_num = -1;
+  pin_cfg.ws_io_num = 43;  
 
+  i2s_set_pin(I2S_NUM_0, &pin_cfg); //for internal DAC, this will enable both of the internal channels
+  i2s_set_sample_rates(I2S_NUM_0, SAMPLERATE); //set sample rates
+  
+  for ( int i = 0; i< MIXBUFFERSIZE; i++ )
+    mixbuffer[i] = i;
+  
+  xTaskCreatePinnedToCore(&updateTask, "updateTask", 4000, NULL, 2, NULL, 1);
+#endif
 
-
+  if((snd_card == 0) && (mus_card == 0)) {
+    return;
+  }
 
   mixbuffer = malloc(MIXBUFFERSIZE*sizeof(unsigned char));
   static const i2s_config_t i2s_config = {
@@ -535,7 +592,9 @@ void I_InitSound(void)
     .use_apll = false
   };
 
-  i2s_driver_install(I2S_NUM_1, &i2s_config, 0, NULL);   //install and start i2s driver
+  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);   //install and start i2s driver
+
+
 /*
     cfg.pin_data_out = 42;
     cfg.pin_bck = 41;
@@ -548,7 +607,8 @@ void I_InitSound(void)
   pin_cfg.data_out_num = 42;
   pin_cfg.mck_io_num = -1;
   pin_cfg.ws_io_num = 43;  
-  i2s_set_pin(I2S_NUM_1, &pin_cfg); //for internal DAC, this will enable both of the internal channels
+
+  i2s_set_pin(I2S_NUM_0, &pin_cfg); //for internal DAC, this will enable both of the internal channels
 
   //i2s_set_dac_mode(I2S_DAC_CHANNEL_LEFT_EN);  
 /*    
@@ -569,7 +629,8 @@ void I_InitSound(void)
       I2S_DAC_CHANNEL_MAX = 0x4
       I2S built-in DAC mode max index    
 */
-  i2s_set_sample_rates(I2S_NUM_1, SAMPLERATE); //set sample rates
+
+  i2s_set_sample_rates(I2S_NUM_0, SAMPLERATE); //set sample rates
   audioStarted = true;
 
   // Initialize external data (all sounds) at start, keep static.
@@ -595,14 +656,14 @@ void I_InitSound(void)
   
   // Now initialize mixbuffer with zero.
   for ( int i = 0; i< MIXBUFFERSIZE; i++ )
-    mixbuffer[i] = 0;
+    mixbuffer[i] = i/8;
   
   // Finished initialization.
   lprintf(LO_INFO, "I_InitSound: sound module ready\n");
 
     audioStarted = true;
 
-
+  if(mus_card) {    
 
     if(music_player->init(snd_samplerate)) {
       printf("music_player->init() success\n");
@@ -613,13 +674,11 @@ void I_InitSound(void)
     }
    
     printf("music_player: %p\n", music_player);
+  }
 
-
-    if(mus_card) {
-      music_player->setvolume(15/*_g->snd_MusicVolume*/);
-    }
-
-
+  if(mus_card) {
+    music_player->setvolume(15/*_g->snd_MusicVolume*/);
+  }  
 
   xTaskCreatePinnedToCore(&updateTask, "updateTask", 4000, NULL, 2, NULL, 1);
 

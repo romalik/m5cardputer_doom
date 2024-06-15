@@ -490,13 +490,40 @@ static void CheckIWAD2(const unsigned char* iwad_data, const unsigned int iwad_l
 
     int ud=0,rg=0,sw=0,cm=0,sc=0;
 
+    printf("Header: ");
+    for(int i = 0; i<4; i++) {
+        putchar(header->identification[i]);
+    }
+    printf("\n");
+
+    //printf("Try strncmp on %p\n", header->identification);
+    //int dd = __wrap_strncmp(header->identification, "IWAD", 4);
+    //printf("strncmp retval = %d\n",dd);
+
     if(!strncmp(header->identification, "IWAD", 4))
     {
         size_t length = header->numlumps;
+        /*
+        printf("Inside check\n");
+
+        printf("header->numlumps: %d\n", length);
+        int ofs = header->infotableofs;
+        printf("header->infotableofs: %d\n", ofs);
+        */
+
         const filelump_t* fileinfo = (const filelump_t*)&iwad_data[header->infotableofs];
 
         while (length--)
         {
+            /*
+            char *s = fileinfo[length].name;
+            printf("Lump %d: ", length);
+            while(*s) {
+                putchar(*s);
+                s++;
+            }
+            printf("\n");
+            */
             if (fileinfo[length].name[0] == 'E' && fileinfo[length].name[2] == 'M' && fileinfo[length].name[4] == 0)
             {
               if (fileinfo[length].name[1] == '4')
@@ -585,6 +612,8 @@ static void CheckIWAD2(const unsigned char* iwad_data, const unsigned int iwad_l
 static void IdentifyVersion()
 {
     CheckIWAD2(doom_iwad, doom_iwad_len, &_g->gamemode, &_g->haswolflevels);
+
+    printf("Check ok\n");
 
     /* jff 8/23/98 set gamemission global appropriately in all cases
      * cphipps 12/1999 - no version output here, leave that to the caller

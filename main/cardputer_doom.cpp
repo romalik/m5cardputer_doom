@@ -11,27 +11,29 @@
 
 
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include "mmap.h"
 
-#include "hal/hal_cardputer.h"
+#undef FILE
+#include "hal/display/hal_display.hpp"
+#include "fat.h"
 
 
 
-using namespace HAL;
-
-
-
-HalCardputer hal;
 
 unsigned short * __sprite_data;
 
 LGFX_Sprite * doom_canvas;
 
-KEYBOARD::Keyboard* __keyboard;
-
 bool scale = true;
 
-void __update_sprite() {
+extern int new_frame;
+extern int frame_n;
 
+extern "C" void __update_sprite() {
+    new_frame = 1;
+    frame_n++;
     if(scale) {
         doom_canvas->pushRotateZoom(240.0f/2.0f,135.0f/2.0f,0.0f,1.0f,(135.0f/160.0f));
     } else {
@@ -40,16 +42,8 @@ void __update_sprite() {
         
 }
 
-void __set_sprite_pallete(unsigned char * pallete) {
-    printf("__set_sprite_pallete()\n");
-    for(int i = 0; i< 256; i++)
-    {
-        unsigned int r = *pallete++;
-        unsigned int g = *pallete++;
-        unsigned int b = *pallete++;
-
-        doom_canvas->setPaletteColor(i,r,g,b);
-    }
+extern "C" void __set_sprite_pallete(unsigned int i, unsigned char r, unsigned char g, unsigned char b) {
+    doom_canvas->setPaletteColor(i,r,g,b);
 }
 
 #include <queue>
@@ -208,7 +202,7 @@ void check_evts() {
 
 }
 
-unsigned char __get_event() {
+extern "C" unsigned char __get_event() {
     check_evts();
     if(evt_queue.empty()) {
         return 0;
@@ -225,7 +219,9 @@ unsigned char __get_event() {
 extern "C" int doom_main(int argc, const char * argv);
 
 #include <driver/sdmmc_host.h>
-#include <esp_vfs_fat.h>
+#include <driver/sdspi_host.h>
+
+//#include <esp_vfs_fat.h>
 
 // Storage
 #define RG_STORAGE_DRIVER           1                   // 0 = Host, 1 = SDSPI, 2 = SDMMC, 3 = USB, 4 = Flash
@@ -245,6 +241,9 @@ static esp_err_t sdcard_do_transaction(int slot, sdmmc_command_t *cmdinfo)
     return ret;
 }
 */
+#include "sdmmc_cmd.h"
+#include "driver/sdmmc_defs.h"
+
 static esp_err_t init_sd() {
     sdmmc_host_t host_config = SDSPI_HOST_DEFAULT();
     host_config.slot = RG_STORAGE_HOST;
@@ -267,6 +266,30 @@ static esp_err_t init_sd() {
     if (err != ESP_OK) // check but do not abort, let esp_vfs_fat_sdspi_mount decide
         printf("SPI bus init failed (0x%x)", err);
 
+    int card_handle = -1;
+    sdmmc_card_t* card = (sdmmc_card_t*)malloc(sizeof(sdmmc_card_t));
+    err = (*host_config.init)();
+    err = sdspi_host_init_device((const sdspi_device_config_t*)&slot_config, &card_handle);
+
+    if (card_handle != host_config.slot) {
+        host_config.slot = card_handle;
+    }
+
+    err = sdmmc_card_init(&host_config, card);
+
+    printf("SD card sector size: %d\n" , card->csd.sector_size);
+
+    char return_code = FAT_mountVolume(card);
+    printf("FAT_mountVolume retval : %d\n", return_code);
+
+    char label[300];
+    uint32_t vol_sn;
+    FAT_getLabel(label, &vol_sn);
+
+    printf("FAT_getLabel returns: %s 0x%08X\n", label, vol_sn);
+
+/*
+    
     esp_vfs_fat_mount_config_t mount_config = {.max_files = 8};
 
     err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
@@ -276,47 +299,110 @@ static esp_err_t init_sd() {
         host_config.max_freq_khz = SDMMC_FREQ_PROBING;
         err = esp_vfs_fat_sdspi_mount(RG_STORAGE_ROOT, &host_config, &slot_config, &mount_config, NULL);
     }
+    */
     return err;
 }
 
-#include <dirent.h>
 
-void listdir(const char *name, int indent)
-{
-    DIR *dir;
-    struct dirent *entry;
 
-    if (!(dir = opendir(name)))
-        return;
 
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_type == DT_DIR) {
-            char path[1024];
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                continue;
-            snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
-            printf("%*s[%s]\n", indent, "", entry->d_name);
-            listdir(path, indent + 2);
-        } else {
-            printf("%*s- %s\n", indent, "", entry->d_name);
-        }
+
+
+#include "doom_iwad.h"
+
+extern const unsigned char doom_iwad_builtin[4676420UL];
+
+
+
+extern "C" void cache_clusters(F_FILE * file) {
+    printf("Cache clusters\n");
+    cluster_size = FAT_get_cluster_size();
+    sectors_per_cluster = FAT_get_sectors_per_cluster();
+    printf("Cluster size: %d\n", cluster_size);
+
+    start_sect_cache = (unsigned int *)malloc((1 + file->file_size / cluster_size) * sizeof(unsigned int));
+
+    unsigned int cnt = 0;
+    for(unsigned int p = 0; p < file->file_size; p += cluster_size) {
+        unsigned int start_sect = file->file_start_sector;
+        printf("%d : %d\n", p, start_sect);
+        start_sect_cache[cnt] = start_sect;
+        _FAT_nextFileCluster(file);
+        cnt++;
     }
-    closedir(dir);
+    printf("Cache size: %d entries\n", cnt);
+    FAT_fseek(file, 0);
 }
 
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include "hal/display/hal_display.hpp"
+extern "C" void init_and_maybe_rebuild_cache(char * wad_path);
+
+extern "C" void init_wad(char * wad_path) {
+    my_mmap_init();
+
+
+#if 0
+    doom_iwad = (unsigned char*)doom_iwad_builtin;
+    doom_iwad_len = sizeof(doom_iwad_builtin);
+#else
+    DIR dir;
+
+    F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
+    FAT_openDir(&dir, "/");
+    FAT_fopen(&dir, doom_wad_file, wad_path);
+    doom_iwad_len = doom_wad_file->file_size;
+
+    printf("WAD size: %d\n", doom_iwad_len);
+
+    cache_clusters(doom_wad_file);
+    //rewind(doom_wad_file);
+
+    doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
+
+    init_and_maybe_rebuild_cache(wad_path);
+
+#endif
+}
+
+void memcheck(char * tag) {
+    unsigned int heapSize = 512000;
+    void * ptr = NULL;
+    //We can now alloc all of the rest fo the memory.
+    do
+    {
+        ptr = malloc(heapSize);
+        heapSize -= 4;
+
+    } while(ptr == NULL);
+
+    free(ptr);
+    printf("Heapsize at %s is %d bytes\n", tag, heapSize);
+}
+
 extern "C" void app_main(void)
 {
+
+
+
+
+    printf("MMAP_PAGE_SIZE: %lu\n", MMAP_PAGE_SIZE);
+    memcheck("Start");
     printf("Init SD\n");
     if(!init_sd() == ESP_OK) {
         printf("SD Init Failed!\n");
     }
     delay(500);
-    mkdir("/sd/doom", 0775);
+    memcheck("SD Init");
+
+    init_wad("gdoom1.wad");
+
+    memcheck("WAD Init");
+
+
+
+    //mkdir("/sd/doom", 0775);
     kb_init(kb_output_list, kb_input_list);
+    memcheck("KB Init");
 
     printf("initCanvas\n");
     LGFX_Cardputer * _display = new LGFX_Cardputer;
@@ -327,25 +413,96 @@ extern "C" void app_main(void)
     doom_canvas->createPalette();
     
     doom_canvas->createSprite(240,160);
+
+    memcheck("Display Init");
     
     __sprite_data = (unsigned short *)doom_canvas->getBuffer();
 
 
-
-/*
-    printf("List root:\n");
-
-    listdir("/sd", 0);
-*/
-
-/*
-    printf("Write file\n");
-    FILE * f = fopen("/sd/testfile", "w");
-    fwrite("test text", 10, 1, f);
-    fclose(f);
-    listdir("/sd", 0);
-*/
     printf("Launch DOOM\n");
     doom_main(0,0);
 
+}
+
+
+void F_listdir() {
+        DIR dir;	// directory object
+        F_FILE file;	// file object
+    	int return_code = FAT_openDir(&dir, "/");
+		
+		if(return_code == FR_OK){
+            printf("Opened dir %s\n", FAT_getFilename());
+			
+			
+			// Get number of folders and files inside the directory
+			int dirItems = FAT_dirCountItems(&dir);
+            printf("Folder has %d items:\n", dirItems);
+			// Print folder content
+			for(uint16_t i = 0; i < dirItems; i++){
+				return_code = FAT_findNext(&dir, &file);
+				
+				if(FAT_attrIsFolder(&file)){
+					printf("D, "); // Directory
+				}else{
+					printf("F, "); // File
+				}
+				
+				printf("Idx: %d , %s\n", FAT_getItemIndex(&dir), FAT_getFilename());
+			}
+		}else{
+            printf("Can not open dir! %d\n", return_code);
+		}
+}
+
+extern "C" void app_main_(void)
+{
+    int return_code;
+    F_FILE file;
+    DIR dir;
+
+    printf("Hello, init sd\n");
+    init_sd();
+    F_listdir();
+    FAT_openDir(&dir, "/");
+    FAT_fopen(&dir, &file, "big_file");
+    int file_size = FAT_getFileSize(&file);
+    printf("File 'big_file' size : %d\n",file_size);
+
+
+    printf("Read file:\n");
+    int c_sector = 0;
+    char buf[512];
+    while(file_size > 0) {
+        FAT_read_file_sector(&file, c_sector, buf);
+        for(int i = 0; i<std::min(512, file_size); i++) {
+            putchar(buf[i]);
+        }
+        file_size -= 512;
+        c_sector++;
+    }
+
+
+
+
+
+    while(1){}
+
+
+/*
+    if(!init_sd() == ESP_OK) {
+        printf("SD Init Failed!\n");
+    }
+    delay(500);
+    printf("List root:\n");
+    listdir("/sd", 0);
+    my_mmap_init();
+    FILE * file = fopen("/sd/big_file", "r");
+    char * mmaped_file = my_mmap(file);
+
+    printf("call mmap_test with ptr %p\n", test_string);
+    mmap_test(test_string);
+    printf("call mmap_test with ptr %p\n", mmaped_file);
+    mmap_test(mmaped_file);
+    while(1);
+    */
 }

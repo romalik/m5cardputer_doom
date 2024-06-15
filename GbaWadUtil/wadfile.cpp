@@ -63,6 +63,8 @@ bool WadFile::SaveWadFile(QString filePath)
 
 bool WadFile::SaveWadFile(QIODevice* device)
 {
+    FILE * wad_memmap = fopen("wad_memmap", "w");
+
     if(!device->isOpen() || !device->isWritable())
         return false;
 
@@ -82,7 +84,7 @@ bool WadFile::SaveWadFile(QIODevice* device)
     quint32 fileOffset = sizeof(wadinfo_t) + (sizeof(filelump_t)*lumps.count());
 
     fileOffset = ROUND_UP4(fileOffset);
-
+    fprintf(wad_memmap, "%08d %08d %08d %s\n", sizeof(wadinfo_t), sizeof(wadinfo_t)/512, fileOffset, "DIRECTRY");
 
     //Write the file info blocks.
     for(int i = 0; i < lumps.count(); i++)
@@ -102,6 +104,12 @@ bool WadFile::SaveWadFile(QIODevice* device)
             fl.filepos = 0;
 
         device->write(reinterpret_cast<const char*>(&fl), sizeof(fl));
+
+        char name[9];
+        name[8] = 0;
+        memcpy(name, fl.name, 8);
+
+        fprintf(wad_memmap, "%08d %08d %08d %s\n", fl.filepos, fl.filepos/512, fl.size, name);
 
         fileOffset += l.length;
         fileOffset = ROUND_UP4(fileOffset);
@@ -123,6 +131,8 @@ bool WadFile::SaveWadFile(QIODevice* device)
 
         device->write(l.data, l.length);
     }
+
+    fclose(wad_memmap);
 
     return true;
 }

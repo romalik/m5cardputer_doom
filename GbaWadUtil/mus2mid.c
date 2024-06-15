@@ -275,8 +275,10 @@ mus_err_t mus2mid(const byte *mus, size_t muslen, byte **mid, size_t *midlen, in
   if (!mus || memcmp(mus, "MUS\x1A", 4))
     return MUS_INVALID;
 
+/*
   printf("mus2mid: Length: %d, Start: %d, Channels: %d, Instruments: %d.\n",
           header->ScoreStart, header->ScoreLength, header->channels, header->InstrCnt);
+*/
 
   if (!muslen)
     muslen = header->ScoreStart + header->ScoreLength;

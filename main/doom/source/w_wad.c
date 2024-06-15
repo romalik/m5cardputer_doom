@@ -125,7 +125,6 @@ static int PUREFUNC FindLumpByName(const char* name, const filelump_t** lump)
     const wadinfo_t* header;
     const filelump_t  *fileinfo;
 
-    
 
     if(doom_iwad_len > 0)
     {
@@ -165,7 +164,7 @@ static int PUREFUNC FindLumpByName(const char* name, const filelump_t** lump)
     return -1;
 }
 
-static const filelump_t* PUREFUNC FindLumpByNum(int num)
+const filelump_t* PUREFUNC FindLumpByNum(int num)
 {
     const wadinfo_t* header;
     const filelump_t  *fileinfo;
@@ -286,7 +285,7 @@ int PUREFUNC W_LumpLength(int lump)
     return 0;
 }
 
-static const void* PUREFUNC W_GetLumpPtr(int lump)
+const void* PUREFUNC W_GetLumpPtr(int lump)
 {
     const filelump_t* l = FindLumpByNum(lump);
 

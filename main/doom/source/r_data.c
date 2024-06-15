@@ -165,7 +165,6 @@ static const texture_t* R_LoadTexture(int texture_num)
     {
         const texpatch_t* patch = &texture->patches[j];
 
-        //Check for patch overlaps.
         int l1 = patch->originx;
         int r1 = l1 + patch->patch->width;
 
@@ -287,6 +286,8 @@ static int R_GetTextureNumForName(const char* tex_name)
 
 int R_LoadTextureByName(const char* tex_name)
 {
+
+    printf("R_LoadTextureByName()\n");
     if(tex_name[0] == '-')
         return NO_TEXTURE;
 
@@ -324,6 +325,8 @@ static void R_InitTextures()
     }
 
     _g->numtextures = numtextures1 + numtextures2;
+
+    printf("going to z_malloc %d\n",_g->numtextures*sizeof*textures);
 
     textures = Z_Malloc(_g->numtextures*sizeof*textures, PU_STATIC, 0);
     memset(textures, 0, _g->numtextures*sizeof*textures);

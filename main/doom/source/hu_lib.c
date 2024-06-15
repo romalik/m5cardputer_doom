@@ -143,7 +143,11 @@ void HUlib_drawTextLine(hu_textline_t* l)
                 break;
             // killough 1/18/98 -- support multiple lines:
             // CPhipps - patch drawing updated
+#ifdef D_SUPPRESS_HUD            
+            printf("Draw char %c at %d %d\n", c, x, y);
+#else            
             V_DrawPatchNoScale(x, y, l->f[c - l->sc]);
+#endif            
             x += w;
         }
         else

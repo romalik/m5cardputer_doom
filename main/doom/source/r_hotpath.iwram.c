@@ -35,8 +35,9 @@
 
 //This is to keep the codesize under control.
 //This whole file needs to fit within IWRAM.
-#pragma GCC optimize ("Os")
+//#pragma GCC optimize ("Os")
 
+#define DO_RESCALE 0
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -529,8 +530,8 @@ static const lighttable_t* R_LoadColorMap(int lightlevel)
 //  be used. It has also been used with Wolfenstein 3D.
 //
 
-#pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+//#pragma GCC push_options
+//#pragma GCC optimize ("Ofast")
 
 #define COLEXTRABITS 9
 #define COLBITS (FRACBITS + COLEXTRABITS)
@@ -542,14 +543,20 @@ inline static void R_DrawColumnPixel(unsigned short* dest, const byte* source, c
 #ifdef GBA
     *d = colormap[source[frac>>COLBITS]];
 #else
-    unsigned int color = colormap[source[frac>>COLBITS]];
 
+    /* RESCALE */
+#if DO_RESCALE
+    unsigned int color = colormap[source[(frac>>COLBITS)/2]];
+#else
+    unsigned int color = colormap[source[(frac>>COLBITS)]];
+#endif
     *d = (color | (color << 8));
 #endif
 }
 
 static void R_DrawColumn (const draw_column_vars_t *dcvars)
 {
+
     int count = (dcvars->yh - dcvars->yl) + 1;
 
     // Zero length, column does not exceed a pixel.
@@ -652,8 +659,11 @@ static void R_DrawColumnHiRes(const draw_column_vars_t *dcvars)
     while(count--)
     {
         unsigned int old = *dest;
-        unsigned int color = colormap[source[frac>>COLBITS]];
-
+#if DO_RESCALE
+        unsigned int color = colormap[source[(frac>>COLBITS)/2]];
+#else
+        unsigned int color = colormap[source[(frac>>COLBITS)]];
+#endif
         *dest = ((old & mask) | (color << shift));
 
         dest+=SCREENWIDTH;
@@ -720,7 +730,7 @@ static void R_DrawFuzzColumn (const draw_column_vars_t *dcvars)
     _g->fuzzpos = fuzzpos;
 }
 
-#pragma GCC pop_options
+//#pragma GCC pop_options
 
 
 
@@ -766,8 +776,11 @@ static void R_DrawMaskedColumn(R_DrawColumn_f colfunc, draw_column_vars_t *dcvar
             //  or (SHADOW) R_DrawFuzzColumn.
             colfunc (dcvars);
         }
-
+#if DO_RESCALE
+        column = (const column_t *)((const byte *)column + column->length/2 + 4);
+#else
         column = (const column_t *)((const byte *)column + column->length + 4);
+#endif
     }
 
     dcvars->texturemid = basetexturemid;
@@ -824,7 +837,12 @@ static void R_DrawVisSprite(const vissprite_t *vis)
 
     while(dcvars.x < SCREENWIDTH)
     {
-        const column_t* column = (const column_t *) ((const byte *)patch + patch->columnofs[frac >> FRACBITS]);
+#if DO_RESCALE
+        const column_t* column = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)/2]);
+#else
+        const column_t* column = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)]);
+#endif
+
         R_DrawMaskedColumn(colfunc, &dcvars, column);
 
         frac += xiscale;
@@ -841,7 +859,11 @@ static void R_DrawVisSprite(const vissprite_t *vis)
             break;
 
 
-        const column_t* column2 = (const column_t *) ((const byte *)patch + patch->columnofs[frac >> FRACBITS]);
+#if DO_RESCALE
+        const column_t* column2 = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)/2]);
+#else
+        const column_t* column2 = (const column_t *) ((const byte *)patch + patch->columnofs[(frac >> FRACBITS)]);
+#endif
         R_DrawMaskedColumn(colfunc, &dcvars, column2);
 
         frac += xiscale;
@@ -865,8 +887,11 @@ static const column_t* R_GetColumn(const texture_t* texture, int texcolumn)
     {
         //simple texture.
         const patch_t* patch = texture->patches[0].patch;
-
+#if DO_RESCALE
+        return (const column_t *) ((const byte *)patch + patch->columnofs[xc/2]);
+#else
         return (const column_t *) ((const byte *)patch + patch->columnofs[xc]);
+#endif
     }
     else
     {
@@ -886,7 +911,11 @@ static const column_t* R_GetColumn(const texture_t* texture, int texcolumn)
             const int x2 = x1 + realpatch->width;
 
             if(xc < x2)
-                return (const column_t *)((const byte *)realpatch + realpatch->columnofs[xc-x1]);
+#if DO_RESCALE            
+                return (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)/2]);
+#else
+                return (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)]);
+#endif                
 
         } while(++i < patchcount);
     }
@@ -962,8 +991,11 @@ static void R_RenderMaskedSegRange(const drawseg_t *ds, int x1, int x2)
     // draw the columns
     for (dcvars.x = x1 ; dcvars.x <= x2 ; dcvars.x++, spryscale += rw_scalestep)
     {
+#if DO_RESCALE            
+        const int xc = maskedtexturecol[dcvars.x/2];
+#else
         const int xc = maskedtexturecol[dcvars.x];
-
+#endif
         if (xc != SHRT_MAX) // dropoff overflow
         {
             sprtopscreen = centeryfrac - FixedMul(dcvars.texturemid, spryscale);
@@ -975,7 +1007,11 @@ static void R_RenderMaskedSegRange(const drawseg_t *ds, int x1, int x2)
 
             R_DrawMaskedColumn(R_DrawColumn, &dcvars, column);
 
+#if DO_RESCALE            
+            maskedtexturecol[dcvars.x/2] = SHRT_MAX; // dropoff overflow
+#else
             maskedtexturecol[dcvars.x] = SHRT_MAX; // dropoff overflow
+#endif
         }
     }
 
@@ -1272,8 +1308,8 @@ static void R_DrawMasked(void)
 //  and the inner loop has to step in texture space u and v.
 //
 
-#pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+//#pragma GCC push_options
+//#pragma GCC optimize ("Ofast")
 
 inline static void R_DrawSpanPixel(unsigned short* dest, const byte* source, const byte* colormap, unsigned int position)
 {
@@ -1283,7 +1319,12 @@ inline static void R_DrawSpanPixel(unsigned short* dest, const byte* source, con
 #ifdef GBA
     *d = colormap[source[((position >> 4) & 0x0fc0) | (position >> 26)]];
 #else
-    unsigned int color = colormap[source[((position >> 4) & 0x0fc0) | (position >> 26)]];
+#if DO_RESCALE            
+                                                                    // >> 2 because /2 to scale width + >>1 to fit 5-bit height
+    unsigned int color = colormap[source[(( ((position >> 4) & 0x0fc0) >> 2) | ( (position >> 26) / 2 ))]];
+#else
+    unsigned int color = colormap[source[(( ((position >> 4) & 0x0fc0)) | ( (position >> 26)))]];
+#endif
 
     *d = (color | (color << 8));
 #endif
@@ -1348,7 +1389,7 @@ static void R_DrawSpan(unsigned int y, unsigned int x1, unsigned int x2, const d
     }
 }
 
-#pragma GCC pop_options
+//#pragma GCC pop_options
 
 static void R_MapPlane(unsigned int y, unsigned int x1, unsigned int x2, draw_span_vars_t *dsvars)
 {    
@@ -1423,8 +1464,11 @@ static void R_DoDrawPlane(visplane_t *pl)
                 if ((dcvars.yl = pl->top[x]) != -1 && dcvars.yl <= (dcvars.yh = pl->bottom[x])) // dropoff overflow
                 {
                     int xc = ((viewangle + xtoviewangle[x]) >> ANGLETOSKYSHIFT);
-
+#if DO_RESCALE            
+                    const column_t* column = R_GetColumn(tex, xc/2);
+#else
                     const column_t* column = R_GetColumn(tex, xc);
+#endif
 
                     dcvars.source = (const byte*)column + 3;
                     R_DrawColumn(&dcvars);
@@ -1778,11 +1822,18 @@ static void R_DrawColumnInCache(const column_t* patch, byte* cache, int originy,
 
         if (position + count > cacheheight)
             count = cacheheight - position;
+#if DO_RESCALE
+        if (count > 0)
+            ByteCopy(cache + position/2, source, count/2);
 
+        patch = (const column_t *)(  (const byte *)patch + patch->length/2 + 4);
+#else
         if (count > 0)
             ByteCopy(cache + position, source, count);
 
         patch = (const column_t *)(  (const byte *)patch + patch->length + 4);
+#endif
+
     }
 }
 
@@ -1892,7 +1943,11 @@ static const byte* R_ComposeColumn(const unsigned int texture, const texture_t* 
 
             if(xc < x2)
             {
-                const column_t* patchcol = (const column_t *)((const byte *)realpatch + realpatch->columnofs[xc-x1]);
+#if DO_RESCALE                
+                const column_t* patchcol = (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)/2]);
+#else
+                const column_t* patchcol = (const column_t *)((const byte *)realpatch + realpatch->columnofs[(xc-x1)]);
+#endif
 
                 R_DrawColumnInCache (patchcol,
                                      tmpCache,
@@ -1904,7 +1959,11 @@ static const byte* R_ComposeColumn(const unsigned int texture, const texture_t* 
         } while(++i < patchcount);
 
         //Block copy will drop low 2 bits of len.
+#if DO_RESCALE                
+        BlockCopy(colcache, tmpCache, (tex->height/2 + 3));
+#else
         BlockCopy(colcache, tmpCache, (tex->height + 3));
+#endif
     }
 
     return colcache;
@@ -2950,8 +3009,11 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
 
     for (unsigned int col = 0; col < width; col++, desttop++)
     {
+#if DO_RESCALE
+        const column_t* column = (const column_t*)((const byte*)patch + patch->columnofs[col/2]);
+#else
         const column_t* column = (const column_t*)((const byte*)patch + patch->columnofs[col]);
-
+#endif
         unsigned int odd_addr = (size_t)desttop & 1;
 
         byte* desttop_even = (byte*)((size_t)desttop & ~1);
@@ -2966,7 +3028,12 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
 
             while (count--)
             {
-                unsigned int color = *source++;
+                unsigned int color = *source;
+#if DO_RESCALE
+                if(count & 0x01) source++;
+#else
+                source++;
+#endif
                 volatile unsigned short* dest16 = (volatile unsigned short*)dest;
 
                 unsigned int old = *dest16;
@@ -2979,8 +3046,11 @@ void V_DrawPatchNoScale(int x, int y, const patch_t* patch)
 
                 dest += 240;
             }
-
+#if DO_RESCALE
+            column = (const column_t*)((const byte*)column + column->length/2 + 4);
+#else
             column = (const column_t*)((const byte*)column + column->length + 4);
+#endif
         }
     }
 }

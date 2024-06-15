@@ -199,7 +199,6 @@ void* Z_Malloc(int size, int tag, void **user)
 
     // account for size of block header
     size += sizeof(memblock_t);
-
     // if there is a free block behind the rover,
     //  back up over them
     base = mainzone->rover;
@@ -215,7 +214,9 @@ void* Z_Malloc(int size, int tag, void **user)
         if (rover == start)
         {
             // scanned all the way around the list
-            I_Error ("Z_Malloc: failed on allocation of %i bytes", size);
+            printf ("Z_Malloc: failed on allocation of %d bytes\n", size);
+                esp_backtrace_print(100);
+            while(1) {}
         }
 
         if (rover->user)
@@ -285,8 +286,10 @@ void* Z_Malloc(int size, int tag, void **user)
 
 
     running_count += base->size;
-    printf("Alloc: %d (used %d/%d)\n", base->size, running_count,_z_heap_size);
 
+
+    printf("Alloc: %d (used %d/%d)\n", base->size, running_count,_z_heap_size);
+    //esp_backtrace_print(100);
 
     return (void *) ((byte *)base + sizeof(memblock_t));
 }
