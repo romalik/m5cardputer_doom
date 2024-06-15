@@ -394,7 +394,7 @@ extern "C" void app_main(void)
     delay(500);
     memcheck("SD Init");
 
-    init_wad("gdoom2.wad");
+    init_wad("gdoom1.wad");
 
     memcheck("WAD Init");
 

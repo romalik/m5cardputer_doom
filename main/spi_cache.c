@@ -273,6 +273,7 @@ char * wad_regions_to_cache[] = {
     "F_START", "F_END",
     "PLAYPAL", "COLORMAP",
     "TEXTURE1", "PNAMES",
+    "GENMIDI", "DSPUNCH", //doom1.wad!!
     NULL
 };
 
@@ -303,7 +304,7 @@ void init_and_maybe_rebuild_cache(char * wad_path) {
         need_rebuild_cache = 1;
     }
 
-    need_rebuild_cache = 1;
+
 
 
     if(need_rebuild_cache) {

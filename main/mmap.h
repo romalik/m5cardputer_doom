@@ -33,7 +33,7 @@ typedef struct mmap_page {
 } mmap_page_t;
 
 
-#define STATIC_CACHE_REGIONS_SIZE 4
+#define STATIC_CACHE_REGIONS_SIZE 5
 //expected to be 512 page aligned
 typedef struct static_cache_region {
     char * reg_begin;

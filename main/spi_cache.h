@@ -19,7 +19,7 @@ extern unsigned char * doom_iwad;
 extern unsigned int doom_iwad_len;
 
 
-#define APP_SIZE 1UL*1024UL*1024UL      //we are fine while size of app is less than 1M
+#define APP_SIZE 2UL*1024UL*1024UL      //we are fine while size of app is less than 1M
 #define FLASH_SIZE 8UL*1024UL*1024UL    //SPI Flash size 8 Mb
 
 void print_partition_info(const esp_partition_t * part);

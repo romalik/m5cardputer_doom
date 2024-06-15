@@ -922,6 +922,14 @@ namespace
             // fun is the current function being called
             gimple_seq gimple_body = fun->gimple_body;
 
+            //fprintf(stderr, "enter function %s\n", function_name(fun));
+            if(lookup_attribute ("no_instrument_function", DECL_ATTRIBUTES (fun->decl)) != NULL_TREE) {
+                //fprintf(stderr, "Has attribute no_instrument_function\n");
+                return 0;
+            } else {
+                //fprintf(stderr, "No attribute\n");
+            }
+
 /*
             std::cerr << "FUNCTION '" << function_name(fun)
                 << "' at " << LOCATION_FILE(fun->function_start_locus) << ":" << LOCATION_LINE(fun->function_start_locus) << "\n";

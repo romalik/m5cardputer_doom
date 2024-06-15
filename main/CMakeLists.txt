@@ -33,6 +33,7 @@ idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=stringop-truncation" APPEND
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=format-overflow=" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=parentheses" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=pointer-sign" APPEND)
+idf_build_set_property(C_COMPILE_OPTIONS "-Wno-error=unused-const-variable" APPEND)
 
 
 set_source_files_properties(${DOOM_SRCS} PROPERTIES COMPILE_FLAGS "-fplugin=${CMAKE_CURRENT_LIST_DIR}/../gcc_plugin_wrap_mem_access/wrap_memaccess.so -Dstrncmp=__wrap_strncmp -Dmemcmp=__wrap_memcmp -Dmemset=__wrap_memset -Dmemcpy=__wrap_memcpy -Dstrcpy=__wrap_strcpy -Dstrncpy=__wrap_strncpy ")
