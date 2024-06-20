@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "mmap.h"
+#include "spi_cache.h"
+
 
 #undef FILE
 #include "hal/display/hal_display.hpp"
@@ -313,7 +315,49 @@ static esp_err_t init_sd() {
 extern const unsigned char doom_iwad_builtin[4676420UL];
 
 
+int check_fragmentation(F_FILE * file) {
+    printf("Check fragmentation\n");
+    cluster_size = FAT_get_cluster_size();
+    sectors_per_cluster = FAT_get_sectors_per_cluster();
+    printf("Cluster size: %d\n", cluster_size);
 
+    unsigned int prev = 0;
+    unsigned int cnt = 0;
+    for(unsigned int p = 0; p < file->file_size; p += cluster_size) {
+        unsigned int start_sect = file->file_start_sector;
+        printf("Cluster at %d\n", start_sect);
+        if(cnt) {
+            if(start_sect != prev + sectors_per_cluster) {
+                printf("Fragmentation!\n");
+                return 1;
+            }
+        }
+        int r = 0;
+        if((r = _FAT_nextFileCluster(file))) {
+            printf("_FAT_nextFileCluster() -> %d\n", r);
+            //while(1) {}
+        }
+        
+        
+        cnt++;
+        prev = start_sect;
+    }
+    _FAT_freset(file);
+    return 0;
+}
+
+extern "C" void setup_first_cluster(F_FILE * file) {
+    cluster_size = FAT_get_cluster_size();
+    sectors_per_cluster = FAT_get_sectors_per_cluster();
+    start_sector = file->file_start_sector;
+}
+
+
+extern "C" void do_defragmentation(F_FILE * file) {
+    (void)file;
+}
+
+/*
 extern "C" void cache_clusters(F_FILE * file) {
     printf("Cache clusters\n");
     cluster_size = FAT_get_cluster_size();
@@ -327,42 +371,26 @@ extern "C" void cache_clusters(F_FILE * file) {
         unsigned int start_sect = file->file_start_sector;
         printf("%d : %d\n", p, start_sect);
         start_sect_cache[cnt] = start_sect;
-        _FAT_nextFileCluster(file);
+
+        int r = 0;
+        if((r = _FAT_nextFileCluster(file))) {
+            printf("_FAT_nextFileCluster() -> %d\n", r);
+            //while(1) {}
+        }
+
         cnt++;
     }
     printf("Cache size: %d entries\n", cnt);
-    FAT_fseek(file, 0);
+    _FAT_freset(file);
 }
+*/
+
+#define CWD_LEN 100
+DIR cwd;
+char cwd_name[CWD_LEN];
 
 
-extern "C" void init_and_maybe_rebuild_cache(char * wad_path);
 
-extern "C" void init_wad(char * wad_path) {
-    my_mmap_init();
-
-
-#if 0
-    doom_iwad = (unsigned char*)doom_iwad_builtin;
-    doom_iwad_len = sizeof(doom_iwad_builtin);
-#else
-    DIR dir;
-
-    F_FILE * doom_wad_file = (F_FILE*)malloc(sizeof(F_FILE));//fopen("/sd/gdoom2.wad", "r");
-    FAT_openDir(&dir, "/");
-    FAT_fopen(&dir, doom_wad_file, wad_path);
-    doom_iwad_len = doom_wad_file->file_size;
-
-    printf("WAD size: %d\n", doom_iwad_len);
-
-    cache_clusters(doom_wad_file);
-    //rewind(doom_wad_file);
-
-    doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
-
-    init_and_maybe_rebuild_cache(wad_path);
-
-#endif
-}
 
 void memcheck(char * tag) {
     unsigned int heapSize = 512000;
@@ -379,12 +407,322 @@ void memcheck(char * tag) {
     printf("Heapsize at %s is %d bytes\n", tag, heapSize);
 }
 
+#define FONT_HEIGHT 16
+#define FONT_WIDTH  8
+
+int gui_select_from_list(const char ** header, int n_header, char ** list, int n) {
+    int c_select = 0;
+    int top = 0;
+    int n_lines = (135/FONT_HEIGHT)-1 - n_header;
+
+    doom_canvas->setFont(&AsciiFont8x16);
+
+    while(1) {
+        doom_canvas->clear();
+        // draw list header
+        for (int i = 0; i< n_header; i++) {
+            doom_canvas->setCursor(0, i*FONT_HEIGHT);
+            doom_canvas->print(header[i]);
+        }
+
+        // draw list subset
+        for(int i = top; i < n; i++) {
+            if(i - top > n_lines) {
+                break;
+            }
+
+            if(i == c_select) {
+                doom_canvas->setCursor(0, (i-top + n_header) * FONT_HEIGHT); //+1 for header
+                doom_canvas->print(">");
+            }
+
+            printf("Try print i %d\n", i);
+            printf("Print %s\n", list[i]);
+            doom_canvas->setCursor(FONT_WIDTH * 2, (i-top + n_header) * FONT_HEIGHT); //+1 for header
+            doom_canvas->print(list[i]);
+        }
+        
+        doom_canvas->pushSprite(0, 0);
+
+        //wait for input
+        while(1){
+            check_evts();
+            unsigned char evt = __get_event();
+            if(evt) {
+                if(evt&0x80) {
+                    //btn press
+                } else {
+                    //btn release
+                    char btn = evt & 0x7f;
+                    if(btn == '.') {
+                        c_select++;
+                        break;
+                    } else if(btn == ';') {
+                        c_select--;
+                        break;
+                    } else if(btn == K_ENT) {
+                        return c_select;
+                    }
+                }
+            }
+        }
+
+        if(c_select < 0)  c_select = n-1;
+        if(c_select >= n) c_select = 0;
+
+        if(c_select < top) {
+            top = c_select;
+        }
+        if(c_select > top + n_lines) {
+            top = c_select - n_lines;
+        }
+
+    }
+}
+
+
+void get_dir_list(char *** list, char ** is_dir, int * n) {
+
+
+    F_FILE file;	// file object
+
+
+    *n = 0;
+
+
+    printf("Opened dir %s\n", FAT_getFilename());
+                
+    // Get number of folders and files inside the directory
+    int dirItems = FAT_dirCountItems(&cwd) + 1;
+
+    if(dirItems) {
+        *list = (char **)malloc(dirItems * sizeof(char *));
+        *is_dir = (char *)malloc(dirItems * sizeof(char));
+        *n = dirItems;
+    }
+    (*list)[0] = (char *)malloc(3 * sizeof(char));
+    strcpy((*list)[0], "..");
+    (*is_dir)[0] = 1;
+
+    printf("Folder has %d items:\n", dirItems);
+    // Print folder content
+    for(uint16_t i = 1; i < dirItems; i++){
+        FAT_findNext(&cwd, &file);
+
+        int fname_len = strlen(FAT_getFilename());
+
+        printf("Idx: %d , %s\n", FAT_getItemIndex(&cwd), FAT_getFilename());
+        (*list)[i] = (char *)malloc(fname_len + 2);
+        strcpy((*list)[i], FAT_getFilename());
+
+
+        if(FAT_attrIsFolder(&file)){
+            printf("D, "); // Directory
+            (*is_dir)[i] = 1;
+
+            (*list)[i][fname_len] = '/';
+            (*list)[i][fname_len + 1] = 0;
+
+        }else{
+            printf("F, "); // File
+            (*is_dir)[i] = 0;
+        }
+        printf("Recorded: %d/%d %s\n", i, *n, (*list)[i]);
+    }
+
+}
+
+/*
+int navigate_to_folder(char * folder) {
+
+    char * f_start = folder;
+    char * f_end = folder;
+    char * str_end = folder + strlen(folder);
+    while(f_start != str_end) {
+        if(*f_start == '/') {
+            f_start++;
+        }
+        f_end = f_start;
+        while(*f_end) {
+            if(*f_end == '/') *f_end = 0;
+            f_end++;
+        }
+
+        if(f_end != f_start) {
+            printf("cd %s\n", f_start);
+            int retval = FAT_openDir(&cwd, f_start);
+            strncat(cwd_name, f_start, 100-strlen(cwd_name));
+        }
+    }
+}
+*/
+
+void select_wad_path(F_FILE * wad_file, char * name) {
+    char cached_path[CWD_LEN];
+    int cached_path_success = 0;
+    if(get_cached_path(cached_path, name)) {
+        printf(" >>> Cached path : %s %s\n", cached_path, name);
+        int rval = FAT_openDir(&cwd, cached_path);
+        if(rval == FR_OK) {
+            strcpy(cwd_name, cached_path);
+            cached_path_success = 1;
+        }
+        
+    } else {
+        printf(" >>> No cached WAD\n");
+
+    }
+
+    int cached_selected = 0;
+    // Continue with cached file dialog
+    if(cached_path_success) {
+        const char * gui_header[3];
+        gui_header[0] = "    === Use previous? ===";
+        gui_header[1] = cwd_name;
+        gui_header[2] = name;
+
+        char * select_list[2];
+        select_list[0] = "Yes";
+        select_list[1] = "No";
+
+        int sel = gui_select_from_list(gui_header, 3, select_list, 2);
+        if(sel == 0) {
+            cached_selected = 1;
+        }
+    }
+
+    // Select WAD file
+    if(!cached_selected) {
+        const char * gui_header[2];
+        gui_header[0] = "     === Select WAD ===";
+
+        int selected = 0;
+
+        while(!selected) {
+            printf("cwd: %s\n", cwd_name);
+            gui_header[1] = cwd_name;
+
+            char ** select_list = NULL;
+            char * is_dir = NULL;
+            int n_files = 0;
+
+            get_dir_list(&select_list, &is_dir, &n_files);
+
+            for(int i = 0; i<n_files; i++) {
+                printf("%d : %s\n", i, select_list[i]);
+            }
+
+            int sel = gui_select_from_list(gui_header, 2, select_list, n_files);
+
+            if(is_dir[sel]) {
+                if(sel == 0) {
+                    FAT_dirBack(&cwd);
+                    if(strlen(cwd_name) > 1) {
+                        int n = strlen(cwd_name) - 2;
+                        while(n >= 0) {
+                            if(cwd_name[n] == '/') {
+                                cwd_name[n+1] = 0;
+                                break;
+                            }
+                            n--;
+                        }
+                    }
+                } else {
+                    strncat(cwd_name, select_list[sel], 100-strlen(cwd_name));
+                    FAT_openDir(&cwd, cwd_name);
+                }
+                
+            } else {
+                strcpy(name, select_list[sel]);
+
+                selected = 1;
+            }
+
+
+
+            for(int i = 0; i<n_files; i++) {
+                free(select_list[i]);
+            }
+            free(select_list);
+            free(is_dir);
+        }
+    }
+
+    printf("Selected %s %s\n", cwd_name, name);
+
+    int retval = FAT_fopen(&cwd, wad_file, name);
+
+    if(retval != FR_OK) {
+        printf("fopen failed!\n");
+    }
+
+    //while(1) {}
+
+}
+
+void canvas_init() {
+    LGFX_Cardputer * _display = new LGFX_Cardputer;
+    _display->init();
+    _display->setRotation(1);
+    doom_canvas = new LGFX_Sprite(_display);
+    doom_canvas->setColorDepth(lgfx::color_depth_t::palette_8bit);
+    doom_canvas->createPalette();
+    doom_canvas->createSprite(240,160);
+    __sprite_data = (unsigned short *)doom_canvas->getBuffer();
+}
+
+extern "C" void init_wad(F_FILE * doom_wad_file, char * wad_name) {
+
+
+
+#if 0
+    doom_iwad = (unsigned char*)doom_iwad_builtin;
+    doom_iwad_len = sizeof(doom_iwad_builtin);
+#else
+
+
+
+    doom_iwad_len = doom_wad_file->file_size;
+
+    printf("WAD size: %d\n", doom_iwad_len);
+
+    int is_fragmented = check_fragmentation(doom_wad_file);
+
+
+    if(is_fragmented) {
+        const char * gui_header[5];
+        char * select_list[1];
+
+        gui_header[0] = "  ======== ERROR ======== ";
+        gui_header[1] = "File fragmented";
+        gui_header[2] = "Defragmentation";
+        gui_header[3] = "not implemented yet";
+        gui_header[4] = "Try to reupload the WAD file ";
+
+        select_list[0] = "OK";
+
+        gui_select_from_list(gui_header, 5, select_list, 1);
+        esp_restart();
+    }
+
+    setup_first_cluster(doom_wad_file);
+
+
+    //cache_clusters(doom_wad_file);
+
+
+
+    //rewind(doom_wad_file);
+
+    doom_iwad = (unsigned char *)my_mmap(doom_wad_file);
+
+    init_and_maybe_rebuild_cache(cwd_name, wad_name);
+
+#endif
+}
 extern "C" void app_main(void)
 {
-
-
-
-
+    F_FILE wad_file;
     printf("MMAP_PAGE_SIZE: %lu\n", MMAP_PAGE_SIZE);
     memcheck("Start");
     printf("Init SD\n");
@@ -392,117 +730,25 @@ extern "C" void app_main(void)
         printf("SD Init Failed!\n");
     }
     delay(500);
-    memcheck("SD Init");
-
-    init_wad("gdoom1.wad");
-
-    memcheck("WAD Init");
 
 
-
-    //mkdir("/sd/doom", 0775);
+    FAT_openDir(&cwd, "/");
+    strcpy(cwd_name, "/");
+    
+    init_spi_flash_cache_partition();
+    my_mmap_init();
     kb_init(kb_output_list, kb_input_list);
-    memcheck("KB Init");
-
-    printf("initCanvas\n");
-    LGFX_Cardputer * _display = new LGFX_Cardputer;
-    _display->init();
-    _display->setRotation(1);
-    doom_canvas = new LGFX_Sprite(_display);
-    doom_canvas->setColorDepth(lgfx::color_depth_t::palette_8bit);
-    doom_canvas->createPalette();
+    canvas_init();
     
-    doom_canvas->createSprite(240,160);
+ 
+    char wad_name[32];
 
-    memcheck("Display Init");
-    
-    __sprite_data = (unsigned short *)doom_canvas->getBuffer();
+    select_wad_path(&wad_file, wad_name);
+
+    init_wad(&wad_file, wad_name);
 
 
     printf("Launch DOOM\n");
     doom_main(0,0);
 
-}
-
-
-void F_listdir() {
-        DIR dir;	// directory object
-        F_FILE file;	// file object
-    	int return_code = FAT_openDir(&dir, "/");
-		
-		if(return_code == FR_OK){
-            printf("Opened dir %s\n", FAT_getFilename());
-			
-			
-			// Get number of folders and files inside the directory
-			int dirItems = FAT_dirCountItems(&dir);
-            printf("Folder has %d items:\n", dirItems);
-			// Print folder content
-			for(uint16_t i = 0; i < dirItems; i++){
-				return_code = FAT_findNext(&dir, &file);
-				
-				if(FAT_attrIsFolder(&file)){
-					printf("D, "); // Directory
-				}else{
-					printf("F, "); // File
-				}
-				
-				printf("Idx: %d , %s\n", FAT_getItemIndex(&dir), FAT_getFilename());
-			}
-		}else{
-            printf("Can not open dir! %d\n", return_code);
-		}
-}
-
-extern "C" void app_main_(void)
-{
-    int return_code;
-    F_FILE file;
-    DIR dir;
-
-    printf("Hello, init sd\n");
-    init_sd();
-    F_listdir();
-    FAT_openDir(&dir, "/");
-    FAT_fopen(&dir, &file, "big_file");
-    int file_size = FAT_getFileSize(&file);
-    printf("File 'big_file' size : %d\n",file_size);
-
-
-    printf("Read file:\n");
-    int c_sector = 0;
-    char buf[512];
-    while(file_size > 0) {
-        FAT_read_file_sector(&file, c_sector, buf);
-        for(int i = 0; i<std::min(512, file_size); i++) {
-            putchar(buf[i]);
-        }
-        file_size -= 512;
-        c_sector++;
-    }
-
-
-
-
-
-    while(1){}
-
-
-/*
-    if(!init_sd() == ESP_OK) {
-        printf("SD Init Failed!\n");
-    }
-    delay(500);
-    printf("List root:\n");
-    listdir("/sd", 0);
-    my_mmap_init();
-    FILE * file = fopen("/sd/big_file", "r");
-    char * mmaped_file = my_mmap(file);
-
-    printf("call mmap_test with ptr %p\n", test_string);
-    mmap_test(test_string);
-    printf("call mmap_test with ptr %p\n", mmaped_file);
-    mmap_test(mmaped_file);
-    while(1);
-    */
 }

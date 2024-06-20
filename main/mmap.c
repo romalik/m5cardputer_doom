@@ -10,7 +10,8 @@ int64_t xx_timestamp_us() {
 
 unsigned int cluster_size = 0;
 unsigned int sectors_per_cluster = 0;
-unsigned int * start_sect_cache = NULL;
+//unsigned int * start_sect_cache = NULL;
+unsigned int start_sector = 0;
 
 
 
@@ -151,13 +152,15 @@ mmap_page_t * get_page_to_swap_out() {
 void swap_in_page(mmap_page_t * page, int file_id, unsigned int chunk_idx, unsigned int offset) {
 
 
-    
+    /*
     unsigned int cluster_idx = chunk_idx / sectors_per_cluster;
 
     unsigned int start_sector = start_sect_cache[cluster_idx];
     unsigned int sector_to_read = start_sector + (chunk_idx % sectors_per_cluster);
-
-
+    */
+    
+    unsigned int sector_to_read = start_sector + chunk_idx;
+    
     
     int retval = sd_read_single_block(sector_to_read, (uint8_t *)page->data);
     

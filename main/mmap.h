@@ -2,6 +2,9 @@
 extern "C" {
 #endif
 
+#ifndef MMAP_H__
+#define MMAP_H__
+
 #ifdef X86
 #include <stdio.h>
 #define F_FILE FILE
@@ -12,7 +15,9 @@ extern "C" {
 
 extern unsigned int cluster_size;
 extern unsigned int sectors_per_cluster;
-extern unsigned int * start_sect_cache;
+//extern unsigned int * start_sect_cache;
+extern unsigned int start_sector;
+
 
 #define MMAP_COLLECT_STATISTICS 0
 #define MAX_MMAP_FILE_SIZE         16*1024*1024U
@@ -79,7 +84,7 @@ unsigned int get_ptr_to_buffer(void * ptr);
 
 void * __remap_ptr(void * ptr, int is_store, unsigned int size, unsigned int align);
 
-
+#endif
 
 #ifdef __cplusplus
 }

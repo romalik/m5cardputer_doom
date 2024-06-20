@@ -412,6 +412,7 @@ bool FAT_attrIsArchive(FILE* finfo_p);
 
 uint8_t _FAT_nextFileCluster(FILE* file_p);
 
+void _FAT_freset(FILE* file_p);
 
 uint8_t FAT_read_file_sector(FILE * file_p, unsigned int sector, char * buffer);
 

@@ -1,5 +1,9 @@
 #include "spi_cache.h"
 
+#include "esp_flash.h"
+#include "esp_spi_flash.h"
+#include "esp_partition.h"
+
 void print_partition_info(const esp_partition_t * part) {
     if(!part) {
         printf("--NULL--\n");
@@ -20,7 +24,7 @@ unsigned int cache_write_position = 512; //leave space for cache header
 
 
 
-void init_spi_flash_cache() {
+void init_spi_flash_cache_partition() {
     esp_partition_iterator_t p_it = esp_partition_find(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, NULL);
 
     const esp_partition_t * last_app_partition = NULL; 
@@ -56,11 +60,6 @@ void init_spi_flash_cache() {
 
 
     esp_partition_iterator_release(p_it);
-
-
-    char header[] = "WADCACHE";
-
-
 
     printf("mmap partition\n");
     esp_partition_mmap(cache_partition, 0, cache_partition->size, SPI_FLASH_MMAP_DATA, &flash_cache_ptr, &flash_cache_handle);
@@ -268,6 +267,53 @@ static_cache_region_t * cache_lumps_between(char * start, char * end) {
 
 }
 
+
+#define CACHED_LENGTH     ( (unsigned int *)(flash_cache_ptr       ) )
+#define CACHED_CRC32      ( (unsigned int *)(flash_cache_ptr + 4   ) )
+#define CACHED_WAD_NAME   ( (char *)        (flash_cache_ptr + 8   ) )
+#define CACHED_WAD_SIZE   ( (unsigned int *)(flash_cache_ptr + 40  ) )
+#define CACHED_N_REGIONS  ( (unsigned int *)(flash_cache_ptr + 44  ) )
+#define CACHED_REGIONS    ( (char *)        (flash_cache_ptr + 48  ) )
+#define CACHED_WAD_PATH   ( (char *)        (flash_cache_ptr + 256 ) )
+
+#define CACHED_DATA       ( (char *)        (flash_cache_ptr + 512 ) )
+
+
+
+
+int check_cache_crc32() {
+    unsigned int *cached_length    = CACHED_LENGTH;
+    unsigned int *cached_crc32     = CACHED_CRC32;
+    char         *cached_data      = CACHED_DATA;
+
+    if(*cached_length > cache_partition->size) {
+        printf("crc32 : bad cached_length\n");
+        return 0;
+    }
+
+    if(*cached_crc32 != xcrc32(cached_data, *cached_length, 0)) {
+        printf("crc32 mismatch\n");
+        return 0;
+    } else {
+        return 1;
+    }
+
+}
+
+int get_cached_path(char * path, char * name) {
+    char *cached_wad_name          = CACHED_WAD_NAME;
+    char *cached_wad_path          = CACHED_WAD_PATH;
+    if(check_cache_crc32()) {
+        strcpy(name, cached_wad_name);
+        strcpy(path, cached_wad_path);
+        return 1;
+    } else {
+        return 0;
+    }
+
+}
+
+
 char * wad_regions_to_cache[] = {
     "P_START", "P_END",
     "F_START", "F_END",
@@ -277,18 +323,20 @@ char * wad_regions_to_cache[] = {
     NULL
 };
 
-void init_and_maybe_rebuild_cache(char * wad_path) {
-    init_spi_flash_cache();
-
-    unsigned int *cached_length    = (unsigned int *)(flash_cache_ptr);
-    unsigned int *cached_crc32     = (unsigned int *)(flash_cache_ptr + 4);
-    char         *cached_wad_name  = (char *)        (flash_cache_ptr + 8);
-    unsigned int *cached_n_regions = (unsigned int *)(flash_cache_ptr + 40);
-    char         *cached_regions   = (char *)        (flash_cache_ptr + 44);
-    char         *cached_data      = (char *)        (flash_cache_ptr + 512);
+void init_and_maybe_rebuild_cache(char * wad_path, char * wad_name) {
 
 
-    printf("Cache header: length %u crc32 0x%08x wad_name '%.8s' n_regs %d\n", *cached_length, *cached_crc32, cached_wad_name, *cached_n_regions);
+    unsigned int *cached_length    = CACHED_LENGTH;
+    unsigned int *cached_crc32     = CACHED_CRC32;
+    char         *cached_wad_name  = CACHED_WAD_NAME;
+    unsigned int *cached_wad_size  = CACHED_WAD_SIZE;
+    unsigned int *cached_n_regions = CACHED_N_REGIONS;
+    char         *cached_regions   = CACHED_REGIONS;
+    char         *cached_wad_path  = CACHED_WAD_PATH;
+    char         *cached_data      = CACHED_DATA;
+
+
+    printf("Cache header: length %u crc32 0x%08x wad_path '%.8s' wad_name '%.8s' wad_size %d n_regs %d\n", *cached_length, *cached_crc32, cached_wad_path, cached_wad_name, *cached_wad_size, *cached_n_regions);
 
 
     //check cache validity
@@ -296,10 +344,16 @@ void init_and_maybe_rebuild_cache(char * wad_path) {
     printf("check cache validity\n");
     int need_rebuild_cache = 0;
 
-    if(strncmp(cached_wad_name, wad_path, strlen(wad_path))) {
+    if(strncmp(cached_wad_path, wad_path, strlen(wad_path))) {
+        printf("wad path mismatch\n");
+        need_rebuild_cache = 1; 
+    } else if(strncmp(cached_wad_name, wad_name, strlen(wad_name))) {
         printf("wad name mismatch\n");
         need_rebuild_cache = 1;
-    } else if(*cached_crc32 != xcrc32(cached_data, *cached_length, 0)) {
+    } else if(doom_iwad_len != *cached_wad_size) {
+        printf("wad size mismatch\n");
+        need_rebuild_cache = 1;
+    } else if(!check_cache_crc32()) {
         printf("crc32 mismatch\n");
         need_rebuild_cache = 1;
     }
@@ -325,9 +379,9 @@ void init_and_maybe_rebuild_cache(char * wad_path) {
             static_cache_region_t * cache_region;        
             cache_region = cache_lumps_between(*w_reg, *(w_reg+1));
 
-            *(unsigned int *)(header + 44 + n_regs*12) = (unsigned int)cache_region->reg_begin;
-            *(unsigned int *)(header + 48 + n_regs*12) = (unsigned int)cache_region->reg_end;
-            *(unsigned int *)(header + 52 + n_regs*12) = (unsigned int)cache_region->data;
+            *(unsigned int *)(header + 48 + n_regs*12) = (unsigned int)cache_region->reg_begin;
+            *(unsigned int *)(header + 52 + n_regs*12) = (unsigned int)cache_region->reg_end;
+            *(unsigned int *)(header + 56 + n_regs*12) = (unsigned int)cache_region->data;
 
             cache_length += cache_region->reg_end - cache_region->reg_begin;
 
@@ -343,9 +397,11 @@ void init_and_maybe_rebuild_cache(char * wad_path) {
         
         *(unsigned int *)(header)      = cache_length;
         *(unsigned int *)(header + 4)  = cache_crc;
-        strcpy(header + 8, wad_path);
+        strcpy(header + 8,   wad_name);
+        strcpy(header + 256, wad_path);
 
-        *(unsigned int *)(header + 40) = n_regs;
+        *(unsigned int *)(header + 40) = doom_iwad_len;
+        *(unsigned int *)(header + 44) = n_regs;
 
         esp_partition_write(cache_partition, 0, header, 512);
 

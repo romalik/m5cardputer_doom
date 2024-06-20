@@ -62,7 +62,7 @@ static FAT fat;							// card object
 **************************************************************/
 // System
 static FRESULT _FAT_dirRegister(DIR* dir_obj, const char* path, uint8_t task);
-static void _FAT_freset(FILE* file_p);
+
 static void _FAT_removeChain(CLSTSIZE_t cluster);
 static FRESULT _FAT_updateFileInfo(FILE* fp, uint8_t task);
 static FRESULT _FAT_allocateCluster(CLSTSIZE_t* new_cluster, CLSTSIZE_t new_cluster_val);
